@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<device id="C542" partnum="TMS320C542" HW_revision="1" XML_version="1" desc="TMS320C542" description="TMS320C542 16-bit Fixed point ultra low power DSP">
+	<!-- Filter for project wizard -->
+	<property Type="stringfield" Value="C540x" id="FilterString" />
+	<cpu HW_revision="1.0" XML_version="1.2" description="CPU" id="C54x" isa="TMS320C5400">
+		<property Type="filepathfield" Value="C:/ti/ccsv5/ccs_base/emulation/gel/c542.gel" id="GEL File"/>
+		<!-- Project Wizard Settings -->
+    <!-- <property Type="stringfield" Value="little" id="Endianness" /> -->
+    <property Type="stringfield" Value="-D=c542 -v=542" id="CompilerBuildOptions" />
+    <property Type="stringfield" Value="--stack_size=0x200 --heap_size=0x400" id="LinkerBuildOptions" />
+    <property Type="stringfield" Value="C542.cmd" id="LinkerCmd" />
+		<!-- END Project Wizard Settings -->
+	</cpu>
+</device>

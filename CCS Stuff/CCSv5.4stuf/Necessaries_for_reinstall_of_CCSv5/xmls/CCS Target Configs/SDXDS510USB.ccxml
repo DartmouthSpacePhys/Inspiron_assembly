@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<configurations XML_version="1.2" id="configurations_0">
+<configuration XML_version="1.2" id="Spectrum Digital XDS510USB Emulator TI-JSC_0">
+        <instance XML_version="1.2" desc="Spectrum Digital XDS510USB Emulator TI-JSC_0" href="connections/SD510USBPLUS_JSC_Connection.xml" id="Spectrum Digital XDS510USB Emulator TI-JSC_0" xml="SD510USBPLUS_JSC_Connection.xml" xmlpath="connections"/>
+        <connection XML_version="1.2" id="Spectrum Digital XDS510USB Emulator TI-JSC_0">
+            <instance XML_version="1.2" href="drivers/sdxds510usbjscc54x.xml" id="drivers" xml="sdxds510usbjscc54x.xml" xmlpath="drivers"/>
+            <platform XML_version="1.2" id="platform_0">
+                <instance XML_version="1.2" desc="TMS320C542_0" href="devices/c542.xml" id="TMS320C542_0" xml="c542.xml" xmlpath="devices"/>
+            </platform>
+        </connection>
+    </configuration>
+</configurations>

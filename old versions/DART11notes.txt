@@ -1,0 +1,184 @@
+Results of experiments with RX-DSP code
+DGM, Jan. 6, 2010
+
+DARTM10.asm - old code with serial port writes during RSP boot, works.
+
+DARTM11.asm - original with serial port writes removed, does NOT work:
+
+rsp_setup:			; Enter with table starting address in A
+	stlm    A,AR2		; Save to AR2 for later use 
+;	ld	#ad6620_msg1,A	; Tell operator what is happening
+;	call	msgout	
+
+rsp_loop:
+	ldm	AR2,A		; Retrieve table index
+;	call	dis4hex		; Display index of table line
+;	ld      #0020h,A	; Space over on screen 
+;	call	asx
+
+	cmpm	*AR2,#table_end	; Is this the end of the table?
+	bc	rspx,TC		; Return if at end		
+
+
+DARTM11t.asm - works:
+
+rsp_setup:			; Enter with table starting address in A
+	portw	AR0,wr_rs_rx	; Reset AD6620 RSP
+	stlm    A,AR2		; Save to AR2 for later use 
+	ld	#ad6620_msg1,A	; Tell operator what is happening
+	call	msgout	
+
+rsp_loop:
+	ldm	AR2,A		; Retrieve table index
+	call	dis4hex		; Display index of table line
+	ld      #0020h,A	; Space over on screen 
+	call	asx
+
+	cmpm	*AR2,#table_end	; Is this the end of the table?
+	bc	rspx,TC		; Return if at end		
+
+
+DARTM11u.asm - works:
+
+rsp_setup:			; Enter with table starting address in A
+;	portw	AR0,wr_rs_rx	; Reset AD6620 RSP
+	stlm    A,AR2		; Save to AR2 for later use 
+	ld	#ad6620_msg1,A	; Tell operator what is happening
+	call	msgout	
+
+rsp_loop:
+	ldm	AR2,A		; Retrieve table index
+;	call	dis4hex		; Display index of table line
+;	ld      #0020h,A	; Space over on screen 
+;	call	asx
+
+	cmpm	*AR2,#table_end	; Is this the end of the table?
+	bc	rspx,TC		; Return if at end		
+
+
+DARTM11v.asm - works:
+
+rsp_setup:			; Enter with table starting address in A
+	stlm    A,AR2		; Save to AR2 for later use 
+	ld	#ad6620_msg1,A	; Tell operator what is happening
+;	call	msgout	
+
+rsp_loop:
+	ldm	AR2,A		; Retrieve table index
+;	call	dis4hex		; Display index of table line
+;	ld      #0020h,A	; Space over on screen 
+;	call	asx
+
+	cmpm	*AR2,#table_end	; Is this the end of the table?
+	bc	rspx,TC		; Return if at end		
+
+
+DARTM11w.asm - CONDITIONALLY works:
+
+rsp_setup:			; Enter with table starting address in A
+	stlm    A,AR2		; Save to AR2 for later use 
+;	ld	#ad6620_msg1,A	; Tell operator what is happening
+;	call	msgout	
+
+rsp_loop:
+;	ldm	AR2,A		; Retrieve table index
+;	call	dis4hex		; Display index of table line
+;	ld      #0020h,A	; Space over on screen 
+;	call	asx
+
+	cmpm	*AR2,#table_end	; Is this the end of the table?
+	bc	rspx,TC		; Return if at end		
+
+
+DARTM11x.asm - works:
+
+rsp_setup:			; Enter with table starting address in A
+	stlm    A,AR2		; Save to AR2 for later use 
+	ld	#ad6620_msg1,A	; Tell operator what is happening
+;	call	msgout	
+
+rsp_loop:
+;	ldm	AR2,A		; Retrieve table index
+;	call	dis4hex		; Display index of table line
+;	ld      #0020h,A	; Space over on screen 
+;	call	asx
+
+	cmpm	*AR2,#table_end	; Is this the end of the table?
+	bc	rspx,TC		; Return if at end		
+
+
+DARTM11y.asm - works:
+
+rsp_setup:			; Enter with table starting address in A
+	stlm    A,AR2		; Save to AR2 for later use 
+;	ld	#ad6620_msg1,A	; Tell operator what is happening
+	nop
+;	call	msgout	
+
+rsp_loop:
+	ldm	AR2,A		; Retrieve table index
+;	call	dis4hex		; Display index of table line
+;	ld      #0020h,A	; Space over on screen 
+;	call	asx
+
+	cmpm	*AR2,#table_end	; Is this the end of the table?
+	bc	rspx,TC		; Return if at end		
+
+
+DARTM11z.asm - does NOT work:
+
+rsp_setup:			; Enter with table starting address in A
+	stlm    A,AR2		; Save to AR2 for later use
+	nop 			; Necessary for loop to execute properly (?!&)
+;	ld	#ad6620_msg1,A	; Tell operator what is happening
+;	call	msgout	
+
+rsp_loop:
+;	ldm	AR2,A		; Retrieve table index
+;	call	dis4hex		; Display index of table line
+;	ld      #0020h,A	; Space over on screen 
+;	call	asx
+
+	cmpm	*AR2,#table_end	; Is this the end of the table?
+	bc	rspx,TC		; Return if at end		
+
+
+DARTM11s.asm - does NOT work:
+
+rsp_setup:			; Enter with table starting address in A
+	stlm    A,AR2		; Save to AR2 for later use 
+	ld	#0000h,A	; Null Load A
+;	ld	#ad6620_msg1,A	; Tell operator what is happening
+;	call	msgout	
+
+rsp_loop:
+;	ldm	AR2,A		; Retrieve table index
+;	call	dis4hex		; Display index of table line
+;	ld      #0020h,A	; Space over on screen 
+;	call	asx
+
+	cmpm	*AR2,#table_end	; Is this the end of the table?
+	bc	rspx,TC		; Return if at end		
+
+DARTM11zz.asm - DOES WORK:
+
+rsp_setup:			; Enter with table starting address in A
+	stlm    A,AR2		; Save to AR2 for later use
+	nop 			; Necessary for loop to execute properly (?!&)
+	nop 			; Necessary for loop to execute properly (?!&)
+;	ld	#ad6620_msg1,A	; Tell operator what is happening
+;	call	msgout	
+
+rsp_loop:
+;	ldm	AR2,A		; Retrieve table index
+;	call	dis4hex		; Display index of table line
+;	ld      #0020h,A	; Space over on screen 
+;	call	asx
+
+	cmpm	*AR2,#table_end	; Is this the end of the table?
+	bc	rspx,TC		; Return if at end		
+
+Conclusions:
+
+To always work, there need to be 2 null instruction cycles between <stlm A,AR2> and <cmpm *AR2,#table_end>.  If there is 1 cycle, the loop does not work.  If 0 cycles, the loop will work IF the processor was run previously with code that works!  If run with code that does NOT work, the 0 cycle code also does not work.  Also, if run previously with DARTM10 code (with serial port writes) the 0 cycle code does not work.
+

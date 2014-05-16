@@ -1,0 +1,42 @@
+          .nolist
+.text     .setsym     0000604h
+___text__  .setsym     0000604h
+etext     .setsym     00007fch
+___etext__  .setsym     00007fch
+.bss      .setsym     0000140h
+___bss__  .setsym     0000140h
+end       .setsym     0000142h
+___end__  .setsym     0000142h
+rawdata_loop  .setsym     0000733h
+pre_read  .setsym     00006bbh
+RXDSP_START  .setsym     000061ah
+pre_disc  .setsym     00006a5h
+post_sleep  .setsym     000074eh
+int_nmi   .setsym     0000781h
+dinner_is_ready  .setsym     0000708h
+abu_restart_skip  .setsym     000076ah
+abu_fill_start  .setsym     00006fbh
+pre_sleep  .setsym     000074ah
+ago_main  .setsym     000061ah
+read_init  .setsym     0000643h
+abu_haltx_wait  .setsym     000075bh
+major_loop  .setsym     0000687h
+hwrite    .setsym     00007adh
+buff_init_loop  .setsym     000066dh
+abu_first_half  .setsym     00006f1h
+bridge_data  .setsym     00006d9h
+rsp_clear  .setsym     00001e9h
+rsp_init  .setsym     00001d4h
+rsp_mstart  .setsym     00001dbh
+rsp_sstart  .setsym     00001e2h
+rsp_reset  .setsym     00001cdh
+xfr08     .setsym     00001c5h
+endboot   .setsym     00001c7h
+par08_1   .setsym     000018bh
+blskipskip  .setsym     00001b0h
+BOOTLOAD_START  .setsym     0000180h
+_serial_cook  .setsym     0001000h
+          .setsect    ".ad6620",00001cdh
+          .list
+          .text
+          .copy       "ad6620.asm"

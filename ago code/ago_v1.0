@@ -1,0 +1,1667 @@
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE    1
+
+      74 00103b                 .text
+      75                        .copy       "ago_v1.0.asm"
+ A     1              ;*****************************************************************************
+ A     2              ;
+ A     3              ; Dartmouth College AGO Rx-DSP Program
+ A     4              ;
+ A     5              ; Written by: Micah P. Dombrowski and Nathan B. Utterback
+ A     6              ;     w/ code segments from TI DSP Library
+ A     7              ;
+ A     8              ;*****************************************************************************
+ A     9              
+ A    10                      .mmregs
+ A    11                      .global ZERO, BMAR, PREG, DBMR, INDX, ARCR, TREG1
+ A    12                      .global TREG2, CBSR1, CBER1, CBSR2, CBER2
+ A    13                      .global RXDSP_START
+ A    14              ;       .ref    _RxDSP_Monitor
+ A    15                      .ref    _cbrev32, _cfft32_512, _log_10, _hann_window, _sqmag, _serial_cook
+ A    16                      .ref    _log_prescale, _sqmag_prescale, _descale
+ A    17                      .ref    rsp_clear, rsp_reset, rsp_init, rsp_mstart, rsp_sstart
+ A    18              ;       .ref    ad6620_soft_reset, ad6620_filter, ad6620_master_run, rsp_setup
+ A    19                      .ref    transfer, transfer_table_sz
+ A    20                      .global bridge_data, buff_clear_loop
+ A    21                      .def    ago_main, int_nmi
+ A    22                      
+ A    23                      .include "rx-dsp.h"
+ A    24              ;       .include "int_table.h"
+ A    25 00103b               .text
+ A    26              
+ A    27 00103b 0076  code_version            .string         "v1.0"
+         00103c 0031 
+         00103d 002E 
+         00103e 0030 
+ A    28 00103f 0030  band_width                      .string         "0300"
+         001040 0033 
+         001041 0030 
+         001042 0030 
+ A    29              
+ A    30              ; Output constants
+ A    31              
+ A    32              ;output_scale_factor            .set    128             ; 0 to 32767
+ A    33        0008  output_shift_n          .set    8               ; left shift before 8-bit mask
+ A    34        0FFF  header_freq_mask        .set    0x0FFF  ; defines bits of 32-bit major frame counter 
+ A    35                                                                                      ; that must be zero for a header fram
+ A    36              
+ A    37              ; Run constants 
+ A    38        0000  fft_scaling             .set    0               ; 
+ A    39              ;data_addr              .set    0x2000  ; Where to store data for FFTing
+ A    40        0200  data_n                  .set    512     ; Size of each FFT (# of IQ pairs)
+ A    41        0200  data_discard    .set    512             ; number of words to discard from Rx FIFO before taking data
+ A    42        0001  data_minor_sz   .set    1               ; number of acquisitions per half-buffer interrupt
+ A    43              ;abu_buff_loc   .set    0x0800  ; serial buffer start location
+ A    44              ;abu_buff_sz    .set    200             ; size of serial buffer (2x major frame size IN BYTES)
+ A    45        0004  fsync_sz                .set    4               ; # of serial frame sync bytes (should be multiple of 4)
+ A    46        00D6  abu_buff_sz             .set    214             ; size of serial buffer (2x major frame size IN BYTES)
+ A    47                              ; should be set to 2*(transfer_table_sz + fsync_sz)
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE    2
+
+ A    48              
+ A    49              ; Memory allocations
+ A    50 002000       data_addr       .usect  ".data_v", 0x800, 1, 1
+ A    51 001e00       scale_addr      .usect  ".scale_v", 0x200, 1, 1
+ A    52 000100       stackres        .usect  ".stack_v", 0x40, 1, 1
+ A    53 000800       abu_buff_loc    .usect  ".sbuff_v", abu_buff_sz, 1, 1
+ A    54        086B- abu_buff_hloc   .set    abu_buff_loc+abu_buff_sz/2      ; half-way
+ A    55              
+ A    56              ; Memory pointers
+ A    57        2000- iq_data         .set    data_addr       ; 512 * 2 words * I/Q
+ A    58        2000- fft_data        .set    data_addr       ; 512 * 2 words * Re/Im
+ A    59        1E00- scale_data      .set    scale_addr      ; 512 words
+ A    60        2000- sqmag_data      .set    data_addr       ; 512 * 2 words
+ A    61        2400- sqsc_data       .set    data_addr+2*data_n      ; 512 words
+ A    62        2000- log_data        .set    data_addr       ; 512 * 2 words
+ A    63        2000- power_data      .set    data_addr       ; 512 words 
+ A    64        2200- ebs_data        .set    data_addr+data_n        ; 512 words
+ A    65              
+ A    66              ; mode flags
+ A    67        0001  mode_std_bit    .set    0001b   ; standard operations
+ A    68        0002  mode_dbg_bit    .set    0010b   ; debug
+ A    69              
+ A    70        0000! mode_std_n              .set    transfer_table_sz
+ A    71        0200  mode_dbg_n              .set    512
+ A    72              
+ A    73              ; Scratchpad RAM usage
+ A    74        0060  bridge_count    .set    scratch
+ A    75        0061  minor_count     .set    scratch+1
+ A    76        0062  bspce_save      .set    scratch+2
+ A    77        0063  bridge_size     .set    scratch+3
+ A    78        0064  mode_flag       .set    scratch+4
+ A    79        0065  shb_addr        .set    scratch+5
+ A    80        0066  major_count     .set    scratch+6       ; two words!
+ A    81        0068  nco_freq        .set    scratch+8       ; two words!
+ A    82              
+ A    83 000144               .bss TempLmem,1*2,0,0  ;temporary dword
+ A    84              
+ A    85              
+ A    86 001043       RXDSP_START
+ A    87 001043       ago_main:
+ A    88              
+ A    89 001043 F6BD          rsbx    XF
+ A    90              
+ A    91              ; Processor setup
+ A    92 001044 F7BB          ssbx    INTM            ; Disable interrupts 
+ A    93 001045 7718          stm     #(stackres+0x40), SP    ; set Stack Pointer
+         001046 0140-
+ A    94 001047 771D          stm     #npmst,PMST     ; Set processor mode/status
+         001048 00A3 
+ A    95              ;       stm #defst0, ST0
+ A    96              ;       stm     #defst1, ST1
+ A    97 001049 F6B8          rsbx    SXM             ; Suppress sign extension 
+ A    98              ;       rsbx    XF
+ A    99 00104a F495          nop                     ; Space for branch to app
+ A   100 00104b F495          nop
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE    3
+
+ A   101               
+ A   102 00104c       appcode:
+ A   103              ;       stm     #0,state        ; Clear interrupt routine state
+ A   104 00104c 7710          stm     #0,AR0          ; Clear auxilliary register 0
+         00104d 0000 
+ A   105                      
+ A   106 00104e 7510          portw   AR0,wr_disc     ; Enable parallel TLM drivers, I_Q out
+         00104f 8000 
+ A   107 001050 7510          portw   AR0,wr_dog      ; Strobe watchdog timer
+         001051 A000 
+ A   108                      
+ A   109 001052 7710          stm     #0,AR0  ; Clear all auxiliary registers
+         001053 0000 
+ A   110 001054 7711          stm     #0,AR1
+         001055 0000 
+ A   111 001056 7712          stm     #0,AR2
+         001057 0000 
+ A   112 001058 7713          stm     #0,AR3
+         001059 0000 
+ A   113 00105a 7714          stm     #0,AR4
+         00105b 0000 
+ A   114 00105c 7715          stm     #0,AR5
+         00105d 0000 
+ A   115 00105e 7716          stm     #0,AR6
+         00105f 0000 
+ A   116 001060 7717          stm     #0,AR7
+         001061 0000 
+ A   117              
+ A   118 001062 7701          stm     #0FFh,IFR       ; Clear any pending interrupts
+         001063 00FF 
+ A   119 001064 7726          stm     #ntss,TCR       ; Stop timer, if running
+         001065 0010 
+ A   120                              
+ A   121              ; Main data code start
+ A   122 001066       read_init:
+ A   123 001066 F074          call    rsp_reset
+         001067 0C00!
+ A   124 001068 F495          nop
+ A   125 001069 F495          nop             
+ A   126 00106a 7510          portw   AR0,wr_rs_rx    ; Hardware reset of AD6620 RSP
+         00106b 0000 
+ A   127 00106c 7510          portw   AR0,wr_rs_rx    ; Hardware reset of AD6620 RSP
+         00106d 0000 
+ A   128 00106e 7510          portw   AR0,wr_rs_rx    ; Hardware reset of AD6620 RSP
+         00106f 0000 
+ A   129 001070 7510          portw   AR0,wr_rs_rx    ; Hardware reset of AD6620 RSP
+         001071 0000 
+ A   130 001072 7510          portw   AR0,wr_rs_rx    ; Hardware reset of AD6620 RSP
+         001073 0000 
+ A   131 001074 7510          portw   AR0,wr_rs_rx    ; Hardware reset of AD6620 RSP
+         001075 0000 
+ A   132 001076 F495          nop
+ A   133 001077 F495          nop
+ A   134 001078 F074          call    rsp_reset
+         001079 0C00!
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE    4
+
+ A   135 00107a F074          call    rsp_init
+         00107b 0C07!
+ A   136 00107c F074          call    rsp_clear
+         00107d 0C1C!
+ A   137 00107e F074          call    rsp_mstart
+         00107f 0C0E!
+ A   138                      
+ A   139 001080 F070          rpt             #4444   ; Let the AD6620 do its first initialization in peace
+         001081 115C 
+ A   140 001082 F495          nop
+ A   141                      
+ A   142 001083 F074          call    rsp_reset
+         001084 0C00!
+ A   143                      
+ A   144                      
+ A   145                      ; store permanent NCO Frequency
+ A   146 001085 F020          ld              #0x4420, A
+         001086 4420 
+ A   147 001087 8068          stl             A, @nco_freq
+ A   148 001088 F020          ld              #0x01FA, A
+         001089 01FA 
+ A   149 00108a 8069          stl             A, @(nco_freq+1)
+ A   150              
+ A   151              
+ A   152 00108b 7410          portr   rs_rx_fifo, AR0    ; Reset Rx FIFO - also sent by wire to Slave
+         00108c A000 
+ A   153 00108d F495          nop
+ A   154 00108e F495          nop     
+ A   155              
+ A   156 00108f 7710          stm     #lsb_sel, AR0   ; Reset acq_seq
+         001090 0002 
+ A   157 001091 7510          portw   AR0, wr_disc
+         001092 8000 
+ A   158 001093 F495          nop
+ A   159                              
+ A   160                      ; BSP prep
+ A   161              
+ A   162 001094 7722          stm             #(bspc_Free+bspc_fsm), BSPC0            ; reset BSP
+         001095 8008 
+ A   163 001096 7700          stm             #(int_bx), IMR                  ; unmask serial transmit interrupt
+         001097 0020 
+ A   164 001098 7723          stm             #(bspce_fe+bspce_bxe), BSPCE0   ; 10-bit words, enable tx autobuffer
+         001099 0480 
+ A   165 00109a 7738          stm             #(abu_buff_loc-0x800), AXR      ; where in the 2048 words of buffer RAM 
+         00109b 0000-
+ A   166                                                                      ; does the transmit buffer start?
+ A   167 00109c 7739          stm             #(abu_buff_sz), BKX             ; buffer size
+         00109d 00D6 
+ A   168                      
+ A   169              ; Clear entire serial buffer
+ A   170 00109e 771A          stm             #abu_buff_sz-1, BRC
+         00109f 00D5 
+ A   171 0010a0 7714          stm             #abu_buff_loc, AR4
+         0010a1 0800-
+ A   172 0010a2 F072          rptb    buff_init_loop - 1
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE    5
+
+         0010a3 10A5'
+ A   173                      
+ A   174 0010a4 7694          st              #0h, *AR4+
+         0010a5 0000 
+ A   175                      
+ A   176 0010a6       buff_init_loop:
+ A   177                      .global buff_init_loop, head_ramp, major_loop
+ A   178              
+ A   179              ; Write out header to first buffer half
+ A   180              
+ A   181 0010a6 7714          stm             #abu_buff_loc, AR4
+         0010a7 0800-
+ A   182                      ; two-byte frame sync 0xEB90
+ A   183              ;       stm             #(abu_buff_loc+abu_buff_sz/2-2), AR4
+ A   184 0010a8 7694          st              #0xFE, *AR4+    ; 4-byte initialization sync
+         0010a9 00FE 
+ A   185 0010aa 7694          st              #0x6B, *AR4+
+         0010ab 006B 
+ A   186 0010ac 7694          st              #0x28, *AR4+
+         0010ad 0028 
+ A   187 0010ae 7694          st              #0x40, *AR4+
+         0010af 0040 
+ A   188                      
+ A   189 0010b0 7710          stm             #file_header, AR0       ; Point to static header words
+         0010b1 1270'
+ A   190 0010b2       header_loop:
+ A   191 0010b2 1090          ld              *AR0+, A                ; Get a word, point to next
+ A   192 0010b3 F845          bc              header_loop_x, AEQ              ; If terminator, end static header
+         0010b4 10B8'
+ A   193 0010b5 8094          stl             A, *AR4+                ; Write to serial buffer
+ A   194 0010b6 F073          b               header_loop
+         0010b7 10B2'
+ A   195 0010b8       header_loop_x:
+ A   196              
+ A   197              
+ A   198 0010b8 F020          ld              #abu_buff_loc, A
+         0010b9 0800-
+ A   199 0010ba E96B          ld              #(abu_buff_sz/2), B
+ A   200                      
+ A   201 0010bb F074          call    _serial_cook
+         0010bc 1AB4!
+ A   202              
+ A   203              ; Set initial bspce_save such that the first acquisition will
+ A   204              ; write to the second half of the serial buffer
+ A   205 0010bd 7662          st              #bspce_xh, @bspce_save
+         0010be 0800 
+ A   206                              
+ A   207              ; Start BSP transmits
+ A   208 0010bf 7722          stm             #(bspc_Free + bspc_fsm + bspc_nXrst), BSPC0     ; have to hold fsm bit
+         0010c0 8048 
+ A   209              
+ A   210              ;       rsbx    INTM ; global interrupt enable
+ A   211              
+ A   212              ; All Aux Registers are fungible in the main loop: values which must be preserved
+ A   213              ; over time are stored in the scratchpad RAM as defined above.  Note that only AR6
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE    6
+
+ A   214              ; and AR7 are required to be preserved by the DSP Library functions (and most others),
+ A   215              ; all other ARx may be modified within function calls.
+ A   216              
+ A   217 0010c1 E800          ld              #0, A
+ A   218 0010c2 4E66          dst             A, @major_count
+ A   219              
+ A   220 0010c3       major_loop:
+ A   221                      
+ A   222 0010c3 7410          portr   rs_rx_fifo, AR0    ; Reset Rx FIFO - also sent by wire to Slave
+         0010c4 A000 
+ A   223 0010c5 F495          nop
+ A   224 0010c6 F495          nop
+ A   225                              
+ A   226 0010c7 7710          stm     #(acq_seq_out+lsb_sel), AR0 ; send acq_seq, set lsb_sel
+         0010c8 0082 
+ A   227 0010c9 7510          portw   AR0, wr_disc
+         0010ca 8000 
+ A   228                      
+ A   229 0010cb F074          call    rsp_clear       ; clear NCO RAM
+         0010cc 0C1C!
+ A   230 0010cd F074          call    rsp_mstart      ; and start digitizing  
+         0010ce 0C0E!
+ A   231                      
+ A   232              ;
+ A   233              ; Reads
+ A   234              ;
+ A   235 0010cf       data_acq_start:
+ A   236              
+ A   237 0010cf 7660          st      #0, @bridge_count               ; reset bridged data counter
+         0010d0 0000 
+ A   238 0010d1 7661          st      #0, @minor_count        ; set minor frame counter
+         0010d2 0000 
+ A   239              
+ A   240                      
+ A   241              ;
+ A   242              ; Set wait states for Rx FIFO
+ A   243              ;
+ A   244 0010d3 4828          ldm     SWWSR, A
+ A   245 0010d4 F120          ld      #65535, B
+         0010d5 FFFF 
+ A   246 0010d6 F35C          xor     #7, #swwsr_is, B ; (0b111<<Nset XOR 0d65535) creates bitmask
+         0010d7 0007 
+ A   247 0010d8 F280          and     B, A                     ; mask out bits of interest
+ A   248 0010d9 F04C          or      #0, #swwsr_is, A ; (A or Nwait<<Nset) to set Nwait to Nset
+         0010da 0000 
+ A   249                      ; Nwait = 0 means no additional waits
+ A   250 0010db 8828          stlm    A, SWWSR
+ A   251              
+ A   252 0010dc F7BD          ssbx    XF
+ A   253 0010dd EC64          rpt #100
+ A   254 0010de F495          nop
+ A   255 0010df F6BD          rsbx    XF
+ A   256                      
+ A   257                      
+ A   258                      .global pre_disc, pre_read
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE    7
+
+ A   259 0010e0       pre_disc:
+ A   260              
+ A   261              ; loop to read and discard first data out of AD6620
+ A   262 0010e0 7712          stm             #(data_discard), AR2
+         0010e1 0200 
+ A   263 0010e2 F495          nop
+ A   264 0010e3       rx_discard_loop:
+ A   265                      ; read only if rx fifo is nonempty
+ A   266 0010e3 7410          portr   rd_disc, AR0
+         0010e4 8000 
+ A   267 0010e5 F495          nop
+ A   268 0010e6 F495          nop
+ A   269 0010e7 6110          bitf    AR0, #rx_efo
+         0010e8 0040 
+ A   270                      
+ A   271 0010e9 F820          bc      discard_fifo_empty, NTC
+         0010ea 10EE'
+ A   272 0010eb 7411          portr   rd_rx_out, AR1          ; read data into AR1
+         0010ec 0000 
+ A   273 0010ed 6D8A          mar     *AR2-                           ; decrement word counter                
+ A   274 0010ee       discard_fifo_empty:
+ A   275              
+ A   276 0010ee 6C82          banz    rx_discard_loop, *AR2
+         0010ef 10E3'
+ A   277                      
+ A   278                      
+ A   279              ; loop to read data from Rx FIFO into RAM
+ A   280 0010f0 7710          stm     #2, AR0
+         0010f1 0002 
+ A   281 0010f2 7711          stm     #iq_data, AR1   ; set address for first data word
+         0010f3 2000-
+ A   282 0010f4 7712          stm     #(data_n*2-1), AR2
+         0010f5 03FF 
+ A   283 0010f6       pre_read:
+ A   284 0010f6 F495          nop
+ A   285 0010f7       rx_read_loop:
+ A   286                      ; read only if rx fifo is nonempty
+ A   287 0010f7 7413          portr   rd_disc, AR3
+         0010f8 8000 
+ A   288 0010f9 F495          nop
+ A   289 0010fa F495          nop
+ A   290 0010fb 6113          bitf    AR3, #rx_efo
+         0010fc 0040 
+ A   291                      
+ A   292 0010fd F820          bc      read_fifo_empty, NTC
+         0010fe 1104'
+ A   293                      
+ A   294 0010ff 7491          portr   rd_rx_out, *AR1+
+         001100 0000 
+ A   295 001101 7691          st      #0, *AR1+               ; zero out second word
+         001102 0000 
+ A   296 001103 6D8A          mar     *AR2-                   ; decrement word counter
+ A   297                      
+ A   298 001104       read_fifo_empty:
+ A   299              
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE    8
+
+ A   300 001104 6E82          banzd   rx_read_loop, *AR2
+         001105 10F7'
+ A   301 001106 F495          nop
+ A   302 001107 F495          nop
+ A   303                      
+ A   304              ;
+ A   305              ; Set wait states for other stuff (full 7)
+ A   306              ;
+ A   307 001108 4828          ldm     SWWSR, A
+ A   308 001109 F04C          or      #7, #swwsr_is, A ; (A or Nwait<<Nset) to set Nwait to Nset
+         00110a 0007 
+ A   309 00110b 8828          stlm    A, SWWSR
+ A   310 00110c F495          nop
+ A   311 00110d F495          nop
+ A   312                      
+ A   313 00110e F7BD          ssbx    XF
+ A   314 00110f EC32          rpt #50
+ A   315 001110 F495          nop
+ A   316 001111 F6BD          rsbx    XF
+ A   317                      
+ A   318              *
+ A   319              * End data acquisition, begin data processing
+ A   320              *
+ A   321               
+ A   322 001112       data_process:
+ A   323              
+ A   324              
+ A   325                      .global pre_window
+ A   326 001112       pre_window:
+ A   327              
+ A   328 001112 F020          ld      #iq_data, A
+         001113 2000-
+ A   329 001114 F120          ld      #data_n, B
+         001115 0200 
+ A   330                      
+ A   331 001116 F074          call    _hann_window
+         001117 1AD9!
+ A   332              
+ A   333                      .global pre_bit_rev
+ A   334 001118       pre_bit_rev:
+ A   335                      
+ A   336              ; Bit reversal
+ A   337 001118 7710          stm             #data_n, AR0
+         001119 0200 
+ A   338 00111a 4A10          pshm    AR0
+ A   339 00111b 7710          stm             #iq_data, AR0
+         00111c 2000-
+ A   340 00111d 4A10          pshm    AR0
+ A   341 00111e F020          ld              #iq_data, A
+         00111f 2000-
+ A   342                      
+ A   343 001120 F074          call _cbrev32
+         001121 07B8!
+ A   344                      
+ A   345 001122 EE02          frame   2
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE    9
+
+ A   346              
+ A   347              
+ A   348                      .global pre_fft
+ A   349 001123       pre_fft:
+ A   350 001123 7710          stm             #fft_scaling, AR0
+         001124 0000 
+ A   351 001125 4A10          pshm    AR0
+ A   352 001126 F020          ld              #fft_data, A
+         001127 2000-
+ A   353                      
+ A   354 001128 F074          call    _cfft32_512
+         001129 185A!
+ A   355                      
+ A   356 00112a EE01          frame   1
+ A   357              
+ A   358                      
+ A   359                      .global pre_move
+ A   360 00112b       pre_move:
+ A   361              ; flip things into proper power spectra order (swap halves)
+ A   362              ; remove zeroes here, too
+ A   363              
+ A   364 00112b 771A          stm             #(data_n-1), BRC
+         00112c 01FF 
+ A   365 00112d 7712          stm             #fft_data, AR2
+         00112e 2000-
+ A   366 00112f 7713          stm             #(fft_data + 2*data_n), AR3
+         001130 2400-
+ A   367                      
+ A   368 001131 F072          rptb    move_loop - 1
+         001132 113E'
+ A   369              
+ A   370 001133 5682          dld             *AR2, A
+ A   371 001134 5783          dld             *AR3, B
+ A   372                      
+ A   373 001135 F495          nop
+ A   374 001136 F495          nop
+ A   375 001137 FF45          xc              2, AEQ
+ A   376 001138 F000          add             #1, A
+         001139 0001 
+ A   377 00113a FF4D          xc              2, BEQ
+ A   378 00113b F300          add             #1, B
+         00113c 0001 
+ A   379                      
+ A   380 00113d 4E93          dst             A, *AR3+
+ A   381 00113e 4F92          dst             B, *AR2+        
+ A   382                      
+ A   383 00113f       move_loop:
+ A   384                      
+ A   385              
+ A   386                      .global pre_sqscale
+ A   387 00113f       pre_sqscale:
+ A   388              
+ A   389 00113f 7710          stm             #scale_addr, AR0        ; scale saves
+         001140 1E00-
+ A   390 001141 4A10          pshm    AR0
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   10
+
+ A   391 001142 7710          stm             #fft_data, AR0          ; output
+         001143 2000-
+ A   392 001144 4A10          pshm    AR0
+ A   393 001145 7710          stm             #fft_data, AR0          ; input
+         001146 2000-
+ A   394 001147 4A10          pshm    AR0
+ A   395 001148 F020          ld              #data_n, A      ; N
+         001149 0200 
+ A   396              
+ A   397 00114a F074          call    _sqmag_prescale
+         00114b 199F!
+ A   398                      
+ A   399 00114c EE03          frame   3       ; free stack
+ A   400              
+ A   401              
+ A   402                      .global pre_abs
+ A   403 00114d       pre_abs:
+ A   404 00114d F7B8          ssbx    SXM
+ A   405 00114e F7B9          ssbx    OVM
+ A   406 00114f F495          nop
+ A   407 001150 F495          nop
+ A   408              
+ A   409 001151 771A          stm             #(2*data_n-1), BRC
+         001152 03FF 
+ A   410 001153 7710          stm             #fft_data, AR0
+         001154 2000-
+ A   411 001155 F072          rptb    abs_loop - 1
+         001156 1159'
+ A   412                      
+ A   413 001157 5680          dld             *AR0, A
+ A   414 001158 F485          abs             A
+ A   415 001159 4E90          dst             A, *AR0+
+ A   416              
+ A   417 00115a       abs_loop:
+ A   418              
+ A   419              
+ A   420                      .global pre_sqmag, pre_log, pre_db
+ A   421 00115a       pre_sqmag:
+ A   422              ; |FFT|^2
+ A   423 00115a F020          ld              #sqmag_data, A
+         00115b 2000-
+ A   424 00115c F120          ld              #data_n, B
+         00115d 0200 
+ A   425                      
+ A   426 00115e F074          call    _sqmag
+         00115f 1A84!
+ A   427              
+ A   428              
+ A   429              
+ A   430              
+ A   431                      .global pre_logps
+ A   432 001160       pre_logps:
+ A   433                      
+ A   434 001160 7710          stm             #scale_data, AR0        ; scale saves
+         001161 1E00-
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   11
+
+ A   435 001162 4A10          pshm    AR0
+ A   436 001163 7710          stm             #sqsc_data, AR0 ; output
+         001164 2400-
+ A   437 001165 4A10          pshm    AR0
+ A   438 001166 7710          stm             #sqmag_data, AR0                                ; input
+         001167 2000-
+ A   439 001168 4A10          pshm    AR0
+ A   440 001169 F020          ld              #data_n, A      ; N
+         00116a 0200 
+ A   441              
+ A   442 00116b F074          call    _log_prescale
+         00116c 19D8!
+ A   443                      
+ A   444 00116d EE03          frame   3
+ A   445              
+ A   446              
+ A   447 00116e       pre_scale:
+ A   448                      
+ A   449              
+ A   450 00116e       pre_log:
+ A   451              ; log_10(|FFT|^2) (outputs 32-bit Q16.15)
+ A   452              
+ A   453 00116e 7710          stm             #data_n, AR0
+         00116f 0200 
+ A   454 001170 4A10          pshm    AR0
+ A   455 001171 7710          stm             #log_data, AR0                  ; write to beginning of data buffer
+         001172 2000-
+ A   456 001173 4A10          pshm    AR0
+ A   457 001174 F020          ld              #sqsc_data, A   ; read from halfway point of data buffer
+         001175 2400-
+ A   458                      
+ A   459 001176 F074          call _log_10
+         001177 1A26!
+ A   460              
+ A   461 001178 EE02          frame   2
+ A   462              
+ A   463              
+ A   464                      .global pre_descale
+ A   465 001179       pre_descale:
+ A   466              
+ A   467 001179 7710          stm             #scale_data, AR0        ; scale saves
+         00117a 1E00-
+ A   468 00117b 4A10          pshm    AR0
+ A   469 00117c 7710          stm             #power_data, AR0                ; output
+         00117d 2000-
+ A   470 00117e 4A10          pshm    AR0
+ A   471 00117f 7710          stm             #log_data, AR0          ; input
+         001180 2000-
+ A   472 001181 4A10          pshm    AR0
+ A   473 001182 F020          ld              #data_n, A      ; N
+         001183 0200 
+ A   474              
+ A   475 001184 F074          call    _descale
+         001185 1A00!
+ A   476                      
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   12
+
+ A   477 001186 EE03          frame   3       ; free stack
+ A   478              
+ A   479              
+ A   480                      .global post_descale
+ A   481 001187       post_descale:
+ A   482              ; multiply by output_scale_factor, shift right by output_shift_n, re-store
+ A   483              
+ A   484 001187 4A06          pshm    ST0
+ A   485 001188 4A07          pshm    ST1
+ A   486 001189 F7B6          ssbx    FRCT
+ A   487 00118a F7B8          ssbx    SXM
+ A   488 00118b F7B9          ssbx    OVM
+ A   489 00118c F6B7          rsbx    C16
+ A   490              
+ A   491              ; Scale and shift, save 8-bit data
+ A   492              
+ A   493 00118d 771A          stm             #data_n-1, BRC
+         00118e 01FF 
+ A   494 00118f 7710          stm             #power_data, AR0
+         001190 2000-
+ A   495 001191 7711          stm             #(data_addr + 2*data_n), AR1
+         001192 2400-
+ A   496 001193 7712          stm             #ebs_data, AR2
+         001194 2200-
+ A   497              ;       stm             #output_scale_factor, T
+ A   498 001195 F072          rptb    ebs_loop - 1
+         001196 119D'
+ A   499                      
+ A   500              ;       mpy             *AR0+, A        ; multiply by scale factor in T
+ A   501              ;       sfta    A, #0-output_shift_n
+ A   502              ;       and             #0xFF0000, A
+ A   503              ;       dst             A, *AR1+
+ A   504                      
+ A   505              ;       mpy             *AR0+, A        ; multiply by scale factor in T
+ A   506 001197 1090          ld              *AR0+, A
+ A   507 001198 F478          sfta    A, #0-output_shift_n
+ A   508 001199 F000          add             #128, A
+         00119a 0080 
+ A   509 00119b F030          and             #0xFF, A
+         00119c 00FF 
+ A   510 00119d 8092          stl             A, *AR2+
+ A   511              ;       dadd    output_shift_n, A       ; shift
+ A   512              ;       sat             A
+ A   513              ;       and             #0xFF, #16, A                   ; mask to A(23-16)
+ A   514              ;       sth             A, *AR2+                                ; store A(23-16)
+ A   515                      
+ A   516 00119e       ebs_loop:
+ A   517              
+ A   518 00119e F495          nop
+ A   519              
+ A   520                      .global dp_end
+ A   521 00119f       dp_end:
+ A   522              
+ A   523              ; Debug code, writes a 512-byte ramp-up-ramp-down
+ A   524              ;       stm             #data_n/2-1, BRC
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   13
+
+ A   525              ;       stm             #0, AR0
+ A   526              ;       stm             #ebs_data, AR2
+ A   527              ;       stm             #ebs_data+data_n-1, AR3
+ A   528              ;       rptb    dummy_data - 1
+ A   529              ;       
+ A   530              ;       mvkd    AR0, *AR2+
+ A   531              ;       mvkd    AR0, *AR3-
+ A   532              ;       mar             *AR0+
+ A   533              ;       
+ A   534              ;dummy_data:
+ A   535              ;       .global dummy_data
+ A   536              
+ A   537 00119f 8A07          popm    ST1
+ A   538 0011a0 8A06          popm    ST0
+ A   539              
+ A   540 0011a1 F495          nop
+ A   541              
+ A   542              *
+ A   543              * End data processing, begin serial data handling
+ A   544              *
+ A   545              
+ A   546 0011a2 7710          stm             #(lsb_sel), AR0
+         0011a3 0002 
+ A   547 0011a4 7510          portw   AR0, wr_disc
+         0011a5 8000 
+ A   548                      
+ A   549              ; Standard mode (#buff_size bytes) or debug mode (#debug_size) depending on trm_28 state.
+ A   550 0011a6 7410          portr   rd_disc, AR0    ; Get discrete bits
+         0011a7 8000 
+ A   551                      
+ A   552              ;       stm             #0, AR0 ; DEBUG !!
+ A   553              ;       nop
+ A   554              ;       nop
+ A   555                      
+ A   556 0011a8 6110          bitf    AR0, #trm_28    ; Test for high terminal input  
+         0011a9 0001 
+ A   557 0011aa F820          bc              standard_mode, NTC      ; If trm_28 is low (NTC), standard data settings
+         0011ab 11B2'
+ A   558                                              ; to #debug_size
+ A   559              
+ A   560 0011ac 7663          st      #mode_dbg_n, @bridge_size
+         0011ad 0200 
+ A   561 0011ae 7664          st      #mode_dbg_bit, @mode_flag
+         0011af 0002 
+ A   562                      
+ A   563 0011b0 F073          b       debug_mode_skip
+         0011b1 11B6'
+ A   564              
+ A   565 0011b2       standard_mode:
+ A   566              
+ A   567 0011b2 7663          st      #mode_std_n, @bridge_size
+         0011b3 0000!
+ A   568 0011b4 7664          st      #mode_std_bit, @mode_flag
+         0011b5 0001 
+ A   569              
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   14
+
+ A   570 0011b6       debug_mode_skip:
+ A   571                      
+ A   572              
+ A   573                      
+ A   574              ; entry point for bridging data transfers over multiple serial half-buffers
+ A   575 0011b6       bridge_data:
+ A   576 0011b6 7710          stm             #(acq_test2+lsb_sel), AR0 ; send acq_seq, set lsb_sel
+         0011b7 0006 
+ A   577 0011b8 7510          portw   AR0, wr_disc
+         0011b9 8000 
+ A   578              
+ A   579 0011ba F495          nop
+ A   580 0011bb F495          nop
+ A   581                      ; Determine serial buffer position
+ A   582 0011bc F020          ld              #abu_buff_loc, A        ; load buffer base
+         0011bd 0800-
+ A   583                      
+ A   584 0011be 6162          bitf    @bspce_save, #bspce_xh          ; read XH out of stored BSPCE register
+         0011bf 0800 
+ A   585 0011c0 F495          nop
+ A   586 0011c1 F495          nop
+ A   587 0011c2 F820          bc              buff_skip, NTC ; if first half _finished_ (XH=0, NTC), do nothing
+         0011c3 11CA'
+ A   588                      
+ A   589 0011c4 F000          add             #(abu_buff_sz/2), A
+         0011c5 006B 
+ A   590                      
+ A   591 0011c6 7710          stm             #(acq_test2+acq_test3+lsb_sel), AR0
+         0011c7 000E 
+ A   592 0011c8 7510          portw   AR0, wr_disc
+         0011c9 8000 
+ A   593                      
+ A   594 0011ca       buff_skip:
+ A   595 0011ca F495          nop
+ A   596 0011cb F495          nop
+ A   597 0011cc 8065          stl     A, @shb_addr    ; scratch storage for serial half-buffer address
+ A   598 0011cd F495          nop
+ A   599 0011ce F495          nop
+ A   600              
+ A   601 0011cf       abu_first_half:
+ A   602                      .global abu_first_half
+ A   603              
+ A   604 0011cf F7BB          ssbx    INTM
+ A   605                      
+ A   606              ; Clear serial buffer half
+ A   607 0011d0 7214          mvdm    @shb_addr, AR4
+         0011d1 0065 
+ A   608 0011d2 F495          nop
+ A   609 0011d3 EC6A          rpt             #(abu_buff_sz/2-1)
+ A   610 0011d4 7694          st              #0xFF, *AR4+
+         0011d5 00FF 
+ A   611                      
+ A   612                      ; reset AR4 for data copy
+ A   613 0011d6 7214          mvdm    @shb_addr, AR4
+         0011d7 0065 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   15
+
+ A   614 0011d8 F495          nop
+ A   615 0011d9 F495          nop
+ A   616                      
+ A   617 0011da       abu_fill_start:
+ A   618                      .global abu_fill_start
+ A   619                              
+ A   620                      ; two-byte frame sync 0xEB90
+ A   621 0011da 7694          st              #0xEB, *AR4+
+         0011db 00EB 
+ A   622 0011dc 7694          st              #0x90, *AR4+
+         0011dd 0090 
+ A   623              
+ A   624                      ; two-byte infofoop
+ A   625 0011de 1061          ld              @minor_count, A                         ; byte 1, minor frame number
+ A   626 0011df F030          and             #0xFF, A
+         0011e0 00FF 
+ A   627 0011e1 8094          stl             A, *AR4+
+ A   628 0011e2 5666          dld             @major_count, A                         ; byte 2, major frame number
+ A   629 0011e3 F130          and             #0xFF, A, B
+         0011e4 00FF 
+ A   630 0011e5 8194          stl             B, *AR4+
+ A   631              
+ A   632 0011e6       post_sync_write:
+ A   633                      .global post_sync_write
+ A   634              
+ A   635              ; Transfer in selected data mode
+ A   636              
+ A   637 0011e6 6164          bitf    @mode_flag, #mode_dbg_bit
+         0011e7 0002 
+ A   638 0011e8 F830          bc              dbg_transfer, TC
+         0011e9 11FF'
+ A   639                      
+ A   640                      ; in standard mode, check if 8-bit major_count (still in A) == 0,
+ A   641                      ; if so, transfer a header instead of data
+ A   642                      
+ A   643              ; Std header: spit out a header frame every 4096th
+ A   644 0011ea F030          and             #header_freq_mask, A
+         0011eb 0FFF 
+ A   645 0011ec F844          bc              header_skip, ANEQ       ; A != 0, skip header
+         0011ed 11F6'
+ A   646                      
+ A   647 0011ee F074          call    hwrite
+         0011ef 129D'
+ A   648 0011f0 7660          st              #mode_std_n, @bridge_count      ; fake it out
+         0011f1 0000!
+ A   649 0011f2 F495          nop
+ A   650 0011f3 F495          nop
+ A   651                      
+ A   652 0011f4 F073          b               end_transfer
+         0011f5 121B'
+ A   653                      
+ A   654 0011f6       header_skip:
+ A   655              ; Std transfer: selected bins in a 1-frame major frame
+ A   656                      ; transfer selected data to serial buffer
+ A   657 0011f6 F020          ld              #ebs_data, A    ; input addr in A
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   16
+
+         0011f7 2200-
+ A   658 0011f8 4914          ldm             AR4, B                  ; output addr in B
+ A   659                      
+ A   660 0011f9 F074          call    transfer
+         0011fa 1917!
+ A   661                      
+ A   662 0011fb 7660          st              #mode_std_n, @bridge_count      ; fake it out
+         0011fc 0000!
+ A   663                      
+ A   664 0011fd F073          b               end_transfer
+         0011fe 121B'
+ A   665              
+ A   666              ; Debug transfer: entire 512-bin fft spread over multiple minor frames
+ A   667 0011ff       dbg_transfer:
+ A   668              
+ A   669                      ; copy raw data (words) into serial buffer (bytes)
+ A   670 0011ff F020          ld              #ebs_data, A
+         001200 2200-
+ A   671 001201 0060          add             @bridge_count, A
+ A   672 001202 8812          stlm    A, AR2
+ A   673                      
+ A   674 001203 7210          mvdm    @bridge_size, AR0       ; goal bridge size
+         001204 0063 
+ A   675 001205 7211          mvdm    @bridge_count, AR1      ; current count
+         001206 0060 
+ A   676              
+ A   677 001207 771A          stm             #((abu_buff_sz/2-fsync_sz)-1), BRC
+         001208 0066 
+ A   678 001209 F072          rptb    rawdata_loop - 1
+         00120a 1217'
+ A   679                      
+ A   680              ;       ld              *AR2+, A                ; load (data word) to Acc
+ A   681              ;       and             #0xFF, A        ; mask to low-byte
+ A   682              ;       stl             A, *AR4+        ; save to serial buffer
+ A   683              
+ A   684 00120b E58A          mvdd    *AR2+, *AR4+
+ A   685                      
+ A   686 00120c 6D91          mar             *AR1+
+ A   687 00120d F5A9          cmpr    LT, AR1                         ; If we're not done with a bridged data sequence, 
+ A   688 00120e F495          nop
+ A   689 00120f F495          nop
+ A   690 001210 FF20          xc              2, NTC
+ A   691 001211 F6BF          rsbx    BRAF
+ A   692 001212 F495          nop
+ A   693 001213 F495          nop
+ A   694 001214 F495          nop
+ A   695 001215 F495          nop
+ A   696 001216 F495          nop
+ A   697 001217 F495          nop
+ A   698                      .global rawdata_loop, dbg_transfer_skip
+ A   699 001218       rawdata_loop:
+ A   700                      
+ A   701 001218 7311          mvmd    AR1, @bridge_count
+         001219 0060 
+ A   702 00121a F495          nop
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   17
+
+ A   703                      
+ A   704 00121b       end_transfer:
+ A   705                      .global end_transfer
+ A   706              
+ A   707 00121b F495          nop
+ A   708              
+ A   709                      
+ A   710 00121c       serial_transfer_end:
+ A   711                      .global serial_transfer_end
+ A   712                      
+ A   713 00121c F495          nop
+ A   714                      
+ A   715                      
+ A   716              ; Bit reverse and add start/stop bits
+ A   717 00121d 1065          ld              @shb_addr, A
+ A   718 00121e E96B          ld              #(abu_buff_sz/2), B
+ A   719              
+ A   720 00121f F074          call    _serial_cook
+         001220 1AB4!
+ A   721                      
+ A   722              
+ A   723              ;       rsbx    INTM
+ A   724                              
+ A   725 001221 6B61          addm    #1, @minor_count
+         001222 0001 
+ A   726                              
+ A   727              ; If a major frame is complete, shut it down
+ A   728              
+ A   729              ; unset acq_seq, keep lsb_sel
+ A   730 001223 7710          stm             #lsb_sel, AR0
+         001224 0002 
+ A   731 001225 7510          portw   AR0, wr_disc
+         001226 8000 
+ A   732              
+ A   733              ; Strobe watchdog- once per acquisition
+ A   734 001227 7710          stm             #0, AR0        ; Data is not used- just the wr_dog strobe
+         001228 0000 
+ A   735 001229 7510          portw   AR0,wr_dog     ; Strobe the watchdog
+         00122a A000 
+ A   736              
+ A   737              ; Stop acquisition, clear interrupts, then idle until an interrupt.
+ A   738 00122b F074          call    rsp_reset
+         00122c 0C00!
+ A   739              
+ A   740 00122d F495          nop
+ A   741 00122e F495          nop
+ A   742              
+ A   743                      .global pre_sleep
+ A   744 00122f       pre_sleep:
+ A   745                      
+ A   746 00122f 7710          stm             #(acq_test4+lsb_sel), AR0
+         001230 0012 
+ A   747 001231 7510          portw   AR0, wr_disc
+         001232 8000 
+ A   748              
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   18
+
+ A   749 001233 F7BB          ssbx    INTM
+ A   750 001234 7701          stm             #0FFh,IFR               ; Clear any pending interrupts
+         001235 00FF 
+ A   751                      
+ A   752 001236 F6E1          idle    2       ; and now...we wait.
+ A   753              
+ A   754                      .global post_sleep
+ A   755 001237       post_sleep:
+ A   756                      
+ A   757              ; check for aux int -> serial monitor
+ A   758              ;       bitf    IFR, #int_3
+ A   759              ;       cc              inth_3, TC
+ A   760                      
+ A   761              ; make sure we had a serial interrupt
+ A   762 001237 6101          bitf    IFR, #int_bx
+         001238 0020 
+ A   763 001239 F820          bc              pre_sleep, NTC  ; stray interrupt, go back to IDLE
+         00123a 122F'
+ A   764                      
+ A   765 00123b F495          nop
+ A   766                              
+ A   767 00123c 7701          stm             #int_bx, IFR    ; clear int flag
+         00123d 0020 
+ A   768                      
+ A   769 00123e 7323          mvmd    BSPCE0, @bspce_save ; store control extension register in AR6
+         00123f 0062 
+ A   770              
+ A   771 001240 6123          bitf    BSPCE0, #bspce_xh
+         001241 0800 
+ A   772 001242 F820          bc              xh_skip, NTC
+         001243 1248'
+ A   773              
+ A   774 001244 7710          stm             #(lsb_sel), AR0
+         001245 0002 
+ A   775 001246 7510          portw   AR0, wr_disc
+         001247 8000 
+ A   776                      
+ A   777 001248       xh_skip:
+ A   778              
+ A   779 001248 EC64          rpt             #100
+ A   780 001249 F495          nop
+ A   781                      
+ A   782 00124a 7710          stm             #lsb_sel, AR0
+         00124b 0002 
+ A   783 00124c 7510          portw   AR0, wr_disc
+         00124d 8000 
+ A   784                      
+ A   785 00124e 7210          mvdm    @bridge_size, AR0       ; need to copy these 
+         00124f 0063 
+ A   786 001250 7211          mvdm    @bridge_count, AR1      ; to use CMPR
+         001251 0060 
+ A   787 001252 F495          nop
+ A   788 001253 F495          nop
+ A   789 001254 F5A9          cmpr    LT, AR1                         ; If we're not done with a bridged data sequence, 
+ A   790 001255 F830          bc              bridge_data, TC ; jump to bridge_data to continue transfers, otherwise...
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   19
+
+         001256 11B6'
+ A   791              
+ A   792 001257 5666          dld             @major_count, A ; increment major frame counter
+ A   793 001258 F000          add             #1, A
+         001259 0001 
+ A   794 00125a 4E66          dst             A, @major_count
+ A   795                      
+ A   796 00125b F073          b               major_loop              ; new data acquisition
+         00125c 10C3'
+ A   797              
+ A   798              ;;
+ A   799              ; Main acquisiton ('appcode') branch done
+ A   800              ;;      
+ A   801              
+ A   802              ;;
+ A   803              ; Interrupts
+ A   804              ;;
+ A   805              
+ A   806              ; Non-Maskable Interrupt
+ A   807              ;               this is hit by the watchdog
+ A   808 00125d       int_nmi:
+ A   809 00125d F495          nop
+ A   810 00125e F495          nop
+ A   811                              
+ A   812 00125f 7710          stm             #0, AR0
+         001260 0000 
+ A   813 001261 7510          portw   AR0,wr_dog      ; Strobe watchdog timer
+         001262 A000 
+ A   814                      
+ A   815 001263 F073          b               0xF800
+         001264 F800 
+ A   816                      
+ A   817              ; Setup: IPTR=0x1FF, OVLY=1, all else =0
+ A   818              ; This should set things up to completely reload the program from the EPROM on reset
+ A   819 001265 771D          stm             #0xFFA0, PMST
+         001266 FFA0 
+ A   820 001267 F495          nop
+ A   821 001268 F495          nop
+ A   822              
+ A   823              ;       reset   ; I don't have to take this.  ...I'm going home.
+ A   824                      
+ A   825 001269 FC00          ret             ; should never get here!
+ A   826              
+ A   827 00126a       inth_3:
+ A   828 00126a F7BB          ssbx    INTM
+ A   829 00126b 7701          stm             #int_3, IFR     ; clear int flag
+         00126c 0100 
+ A   830              
+ A   831                      ; call serial monitor
+ A   832              
+ A   833                      
+ A   834              ;       calld   _RxDSP_Monitor
+ A   835              ;       stm             #bspce_haltx, BSPCE      ; tell serial transmit to halt after completing this half-bu
+ A   836              
+ A   837                      
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   20
+
+ A   838 00126d FE00          retd
+ A   839 00126e F495          nop
+ A   840 00126f F495          nop
+ A   841              
+ A   842 001270       file_header:
+ A   843 001270 0044          .string "Dartmouth College Rx-DSP, AGO Site 3 Unit 0."
+         001271 0061 
+         001272 0072 
+         001273 0074 
+         001274 006D 
+         001275 006F 
+         001276 0075 
+         001277 0074 
+         001278 0068 
+         001279 0020 
+         00127a 0043 
+         00127b 006F 
+         00127c 006C 
+         00127d 006C 
+         00127e 0065 
+         00127f 0067 
+         001280 0065 
+         001281 0020 
+         001282 0052 
+         001283 0078 
+         001284 002D 
+         001285 0044 
+         001286 0053 
+         001287 0050 
+         001288 002C 
+         001289 0020 
+         00128a 0041 
+         00128b 0047 
+         00128c 004F 
+         00128d 0020 
+         00128e 0053 
+         00128f 0069 
+         001290 0074 
+         001291 0065 
+         001292 0020 
+         001293 0033 
+         001294 0020 
+         001295 0055 
+         001296 006E 
+         001297 0069 
+         001298 0074 
+         001299 0020 
+         00129a 0030 
+         00129b 002E 
+ A   844 00129c 0000          .word   0000h   ; Null terminator
+ A   845              
+ A   846              ****
+ A   847              * hwrite
+ A   848              *
+ A   849              * Writes a header:
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   21
+
+ A   850              *
+ A   851              * <0xFE6B2840><RxDSP><Unit #><Ver #><NCOF><MFCB><00000000>
+ A   852              *
+ A   853              ****
+ A   854              
+ A   855 00129d       hwrite:
+ A   856                      .global hwrite
+ A   857              
+ A   858 00129d 4A13          pshm    AR3
+ A   859              
+ A   860              ; 4-byte sync
+ A   861 00129e 7713          stm             #static_header, AR3     ; Point to static header words
+         00129f 12DC'
+ A   862 0012a0 F070          rpt             #static_header_len              ; <SYNC><RxDSP>
+         0012a1 000B 
+ A   863 0012a2 E59A          mvdd    *AR3+, *AR4+
+ A   864                      
+ A   865 0012a3 7713          stm             #code_version, AR3
+         0012a4 103B'
+ A   866 0012a5 EC03          rpt             #3
+ A   867 0012a6 E59A          mvdd    *AR3+, *AR4+
+ A   868                      
+ A   869 0012a7 7713          stm             #spec_header, AR3       ; Point to static header words
+         0012a8 12E8'
+ A   870 0012a9 F070          rpt             #spec_header_len                ; <skipNS><fbstFBSN><fbenFBEN>
+         0012aa 001F 
+ A   871 0012ab E59A          mvdd    *AR3+, *AR4+
+ A   872                      
+ A   873 0012ac 7713          stm             nco_freq, AR3
+         0012ad 0068 
+ A   874 0012ae 6F83          ld              *AR3, #-8, A
+         0012af 0C58 
+ A   875 0012b0 F030          and             #0xFF, A
+         0012b1 00FF 
+ A   876 0012b2 8094          stl             A, *AR4+
+ A   877 0012b3 1093          ld              *AR3+, A        ; inc to second word
+ A   878 0012b4 F030          and             #0xFF, A
+         0012b5 00FF 
+ A   879 0012b6 8094          stl             A, *AR4+
+ A   880 0012b7 6F83          ld              *AR3, #-8, A
+         0012b8 0C58 
+ A   881 0012b9 F030          and             #0xFF, A
+         0012ba 00FF 
+ A   882 0012bb 8094          stl             A, *AR4+
+ A   883 0012bc 1083          ld              *AR3, A
+ A   884 0012bd F030          and             #0xFF, A
+         0012be 00FF 
+ A   885 0012bf 8094          stl             A, *AR4+
+ A   886                              
+ A   887 0012c0 7713          stm             #band_width, AR3
+         0012c1 103F'
+ A   888 0012c2 EC03          rpt             #3
+ A   889 0012c3 E59A          mvdd    *AR3+, *AR4+
+ A   890              
+ A   891 0012c4 7713          stm             major_count, AR3
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   22
+
+         0012c5 0066 
+ A   892 0012c6 6F83          ld              *AR3, #-8, A
+         0012c7 0C58 
+ A   893 0012c8 F030          and             #0xFF, A
+         0012c9 00FF 
+ A   894 0012ca 8094          stl             A, *AR4+
+ A   895 0012cb 1093          ld              *AR3+, A        ; inc to second word
+ A   896 0012cc F030          and             #0xFF, A
+         0012cd 00FF 
+ A   897 0012ce 8094          stl             A, *AR4+
+ A   898 0012cf 6F83          ld              *AR3, #-8, A
+         0012d0 0C58 
+ A   899 0012d1 F030          and             #0xFF, A
+         0012d2 00FF 
+ A   900 0012d3 8094          stl             A, *AR4+
+ A   901 0012d4 1083          ld              *AR3, A
+ A   902 0012d5 F030          and             #0xFF, A
+         0012d6 00FF 
+ A   903 0012d7 8094          stl             A, *AR4+
+ A   904                              
+ A   905 0012d8 8A13          popm    AR3
+ A   906                      
+ A   907 0012d9 FE00          retd
+ A   908 0012da F495          nop
+ A   909 0012db F495          nop
+ A   910              
+ A   911 0012dc       static_header:
+ A   912 0012dc 00FE                  .word   0xFE, 0x6B, 0x28, 0x40
+         0012dd 006B 
+         0012de 0028 
+         0012df 0040 
+ A   913 0012e0 0041                  .string "AGORxDSP"      ; 12 bytes
+         0012e1 0047 
+         0012e2 004F 
+         0012e3 0052 
+         0012e4 0078 
+         0012e5 0044 
+         0012e6 0053 
+         0012e7 0050 
+ A   914 0012e8       static_header_end:
+ A   915        000B  static_header_len       .set    static_header_end-static_header-1
+ A   916              
+ A   917 0012e8       spec_header:
+ A   918 0012e8 0073                  .string "stride08"
+         0012e9 0074 
+         0012ea 0072 
+         0012eb 0069 
+         0012ec 0064 
+         0012ed 0065 
+         0012ee 0030 
+         0012ef 0038 
+ A   919 0012f0 0063                  .string "cbst0113"
+         0012f1 0062 
+         0012f2 0073 
+         0012f3 0074 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   23
+
+         0012f4 0030 
+         0012f5 0031 
+         0012f6 0031 
+         0012f7 0033 
+ A   920 0012f8 0063                  .string "cben0166"
+         0012f9 0062 
+         0012fa 0065 
+         0012fb 006E 
+         0012fc 0030 
+         0012fd 0031 
+         0012fe 0036 
+         0012ff 0036 
+ A   921 001300 0030                  .string "00000000"      ; pad to 32 bytes
+         001301 0030 
+         001302 0030 
+         001303 0030 
+         001304 0030 
+         001305 0030 
+         001306 0030 
+         001307 0030 
+ A   922 001308       spec_header_end:
+ A   923        001F  spec_header_len         .set    spec_header_end-spec_header-1
+ A   924                      
+ A   925              
+ A   926              ;       .include "ad6620.asm"
+ A   927              ;       .include "cbrev.asm"
+ A   928              
+ A   929                      .end
+
+No Assembly Errors, No Assembly Warnings
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   24
+
+LABEL                                VALUE       DEFN    REF
+
+.TMS320C540                         000000          0 
+.TMS320C541                         000000          0 
+.TMS320C541A                        000000          0 
+.TMS320C542                         000001          0 
+.TMS320C543                         000000          0 
+.TMS320C544                         000000          0 
+.TMS320C545                         000000          0 
+.TMS320C545LP                       000000          0 
+.TMS320C546                         000000          0 
+.TMS320C546LP                       000000          0 
+.TMS320C548                         000000          0 
+.TMS320C549                         000000          0 
+ARCR                                   REF             A  11 
+BMAR                                   REF             A  11 
+CBER1                                  REF             A  12 
+CBER2                                  REF             A  12 
+CBSR1                                  REF             A  12 
+CBSR2                                  REF             A  12 
+CR                                  00000d      B 130 
+CRLF                                000d0a      B 132 
+DBMR                                   REF             A  11 
+ESC                                 00001b      B 133 
+INDX                                   REF             A  11 
+LF                                  00000a      B 131 
+PREG                                   REF             A  11 
+RXDSP_START                         001043'     A  86  A  13 
+TREG1                                  REF             A  11 
+TREG2                                  REF             A  12 
+TempLmem                            000144-     A  83 
+ZERO                                   REF             A  11 
+__TI_ASSEMBLER_VERSION__            3d10d0          0 
+__far_mode                          000000          0 
+__lflags                            000000          0 
+__no_fret                           000000          0 
+__stores_bug                        000000          0 
+_cbrev32                               REF             A  15  A 343 
+_cfft32_512                            REF             A  15  A 354 
+_descale                               REF             A  16  A 475 
+_hann_window                           REF             A  15  A 331 
+_log_10                                REF             A  15  A 459 
+_log_prescale                          REF             A  16  A 442 
+_serial_cook                           REF             A  15  A 201  A 720 
+_sqmag                                 REF             A  15  A 426 
+_sqmag_prescale                        REF             A  16  A 397 
+abs_loop                            00115a'     A 417  A 411 
+abu_buff_hloc                       00086b-     A  54 
+abu_buff_loc                        000800-     A  53  A  54  A 165  A 171  A 181 
+                                                       A 198  A 582 
+abu_buff_sz                         0000d6      A  46  A  53  A  54  A 167  A 170 
+                                                       A 199  A 589  A 609  A 677 
+                                                       A 718 
+abu_fill_start                      0011da'     A 617  A 618 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   25
+
+LABEL                                VALUE       DEFN    REF
+
+abu_first_half                      0011cf'     A 601  A 602 
+acq_seq_in                          000002      B 161 
+acq_seq_len                         007fff      B 143 
+acq_seq_out                         000080      B 156  A 226 
+acq_test2                           000004      B 151  A 576  A 591 
+acq_test3                           000008      B 152  A 591 
+acq_test4                           000010      B 153  A 746 
+acq_test5                           000020      B 154 
+acq_test6                           000040      B 155 
+ago_main                            001043'     A  87  A  21 
+amr                                 000007      B 116 
+appcode                             00104c'     A 102 
+band_width                          00103f'     A  28  A 887 
+bridge_count                        000060      A  74  A 237  A 648  A 662  A 671 
+                                                       A 675  A 701  A 786 
+bridge_data                         0011b6'     A 575  A  20  A 790 
+bridge_size                         000063      A  77  A 560  A 567  A 674  A 785 
+bspc_Free                           008000      B 198  A 162  A 208 
+bspc_RSRfull                        002000      B 196 
+bspc_Rrdy                           000400      B 193 
+bspc_Soft                           004000      B 197 
+bspc_XSRfull                        001000      B 195 
+bspc_Xrdy                           000800      B 194 
+bspc_dlb                            000002      B 184 
+bspc_fo                             000004      B 185 
+bspc_fsm                            000008      B 186  A 162  A 208 
+bspc_in0                            000100      B 191 
+bspc_in1                            000200      B 192 
+bspc_mcm                            000010      B 187 
+bspc_nRrst                          000080      B 190 
+bspc_nXrst                          000040      B 189  A 208 
+bspc_txm                            000020      B 188 
+bspce_bre                           002000      B 211 
+bspce_bxe                           000400      B 208  A 164 
+bspce_clkp                          000040      B 204 
+bspce_fe                            000080      B 205  A 164 
+bspce_fig                           000100      B 206 
+bspce_fsp                           000020      B 203 
+bspce_haltr                         008000      B 213 
+bspce_haltx                         001000      B 210 
+bspce_pcm                           000200      B 207 
+bspce_rh                            004000      B 212 
+bspce_save                          000062      A  76  A 205  A 584  A 769 
+bspce_xh                            000800      B 209  A 205  A 584  A 771 
+buff_clear_loop                        REF             A  20 
+buff_init_loop                      0010a6'     A 176  A 172  A 177 
+buff_skip                           0011ca'     A 594  A 587 
+clk_rx_out                          002000      B  56 
+code_version                        00103b'     A  27  A 865 
+data_acq_start                      0010cf'     A 235 
+data_addr                           002000-     A  50  A  57  A  58  A  60  A  61 
+                                                       A  62  A  63  A  64  A 495 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   26
+
+LABEL                                VALUE       DEFN    REF
+
+data_discard                        000200      A  41  A 262 
+data_minor_sz                       000001      A  42 
+data_n                              000200      A  40  A  61  A  64  A 282  A 329 
+                                                       A 337  A 364  A 366  A 395 
+                                                       A 409  A 424  A 440  A 453 
+                                                       A 473  A 493  A 495 
+data_process                        001112'     A 322 
+dbg_transfer                        0011ff'     A 667  A 638 
+dbg_transfer_skip                      REF             A 698 
+debug_mode_skip                     0011b6'     A 570  A 563 
+defst0                              001800      B  14 
+defst1                              002900      B  21 
+disc_0                              000001      B 160 
+discard_fifo_empty                  0010ee'     A 274  A 271 
+dp_end                              00119f'     A 521  A 520 
+dr0                                 000000      B 109 
+dr1                                 000001      B 110 
+dr2                                 000002      B 111 
+dr3                                 000003      B 112 
+dr4                                 000004      B 113 
+ebs_data                            002200-     A  64  A 496  A 657  A 670 
+ebs_loop                            00119e'     A 516  A 498 
+end_transfer                        00121b'     A 704  A 652  A 664  A 705 
+fft_data                            002000-     A  58  A 352  A 365  A 366  A 391 
+                                                       A 393  A 410 
+fft_scaling                         000000      A  38  A 350 
+file_header                         001270'     A 842  A 189 
+fsync_sz                            000004      A  45  A 677 
+head_ramp                              REF             A 177 
+header_freq_mask                    000fff      A  34  A 644 
+header_loop                         0010b2'     A 190  A 194 
+header_loop_x                       0010b8'     A 195  A 192 
+header_skip                         0011f6'     A 654  A 645 
+hwrite                              00129d'     A 855  A 647  A 856 
+int_0                               000001      B  95 
+int_1                               000002      B  96 
+int_2                               000004      B  97 
+int_3                               000100      B 103  A 829 
+int_br                              000010      B  99 
+int_bx                              000020      B 100  A 163  A 762  A 767 
+int_nmi                             00125d'     A 808  A  21 
+int_t                               000008      B  98 
+int_tr                              000040      B 101 
+int_tx                              000080      B 102 
+inth_3                              00126a'     A 827 
+iq_data                             002000-     A  57  A 281  A 328  A 339  A 341 
+iq_len                              00003f      B 142 
+lar                                 000006      B 115 
+log_data                            002000-     A  62  A 455  A 471 
+lsb_sel                             000002      B 150  A 156  A 226  A 546  A 576 
+                                                       A 591  A 730  A 746  A 774 
+                                                       A 782 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   27
+
+LABEL                                VALUE       DEFN    REF
+
+major_count                         000066      A  80  A 218  A 628  A 792  A 794 
+                                                       A 891 
+major_loop                          0010c3'     A 220  A 177  A 796 
+minor_count                         000061      A  75  A 238  A 625  A 725 
+mode_dbg_bit                        000002      A  68  A 561  A 637 
+mode_dbg_n                          000200      A  71  A 560 
+mode_flag                           000064      A  78  A 561  A 568  A 637 
+mode_std_bit                        000001      A  67  A 568 
+mode_std_n                          000000      A  70  A 567  A 648  A 662 
+move_loop                           00113f'     A 383  A 368 
+nco_freq                            000068      A  81  A 147  A 149  A 873 
+nload                               000020      B  88 
+npmst                               0000a3      B   4  A  94 
+nprd                                00095f      B  89 
+ntddr                               000000      B  86 
+ntss                                000010      B  85  A 119 
+nwait                               00063f      B  90 
+output_shift_n                      000008      A  33  A 507 
+par_tm_en                           000001      B 149 
+post_descale                        001187'     A 481  A 480 
+post_sleep                          001237'     A 755  A 754 
+post_sync_write                     0011e6'     A 632  A 633 
+power_data                          002000-     A  63  A 469  A 494 
+pre_abs                             00114d'     A 403  A 402 
+pre_bit_rev                         001118'     A 334  A 333 
+pre_db                                 REF             A 420 
+pre_descale                         001179'     A 465  A 464 
+pre_disc                            0010e0'     A 259  A 258 
+pre_fft                             001123'     A 349  A 348 
+pre_log                             00116e'     A 450  A 420 
+pre_logps                           001160'     A 432  A 431 
+pre_move                            00112b'     A 360  A 359 
+pre_read                            0010f6'     A 283  A 258 
+pre_scale                           00116e'     A 447 
+pre_sleep                           00122f'     A 744  A 743  A 763 
+pre_sqmag                           00115a'     A 421  A 420 
+pre_sqscale                         00113f'     A 387  A 386 
+pre_window                          001112'     A 326  A 325 
+prom                                008000      B  35 
+rawdata_loop                        001218'     A 699  A 678  A 698 
+rd_disc                             008000      B  59  A 266  A 287  A 550 
+rd_out2                             006000      B  58 
+rd_rsv                              00e000      B  62 
+rd_rx                               004000      B  57 
+rd_rx_out                           000000      B  55  A 272  A 294 
+read_fifo_empty                     001104'     A 298  A 292 
+read_init                           001066'     A 122 
+rs_fifo                             00c000      B  61 
+rs_rx_fifo                          00a000      B  60  A 152  A 222 
+rsp_clear                              REF             A  17  A 136  A 229 
+rsp_init                               REF             A  17  A 135 
+rsp_mstart                             REF             A  17  A 137  A 230 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   28
+
+LABEL                                VALUE       DEFN    REF
+
+rsp_reset                              REF             A  17  A 123  A 134  A 142 
+                                                       A 738 
+rsp_sstart                             REF             A  17 
+rsv                                 000005      B 114 
+rx_discard_loop                     0010e3'     A 264  A 276 
+rx_efo                              000040      B 166  A 269  A 290 
+rx_ffo                              000020      B 165 
+rx_hfo                              000080      B 167 
+rx_read_loop                        0010f7'     A 285  A 300 
+scale_addr                          001e00-     A  51  A  59  A 389 
+scale_data                          001e00-     A  59  A 434  A 467 
+scratch                             000060      B  36  A  74  A  75  A  76  A  77 
+                                                       A  78  A  79  A  80  A  81 
+seq_len                             00ffff      B 144 
+serial_transfer_end                 00121c'     A 710  A 711 
+shb_addr                            000065      A  79  A 597  A 607  A 613  A 717 
+spec_header                         0012e8'     A 917  A 869  A 923 
+spec_header_end                     001308'     A 922  A 923 
+spec_header_len                     00001f      A 923  A 870 
+sqmag_data                          002000-     A  60  A 423  A 438 
+sqsc_data                           002400-     A  61  A 436  A 457 
+stack                               00013f      B  37 
+stackres                            000100-     A  52  A  93 
+standard_mode                       0011b2'     A 565  A 557 
+static_header                       0012dc'     A 911  A 861  A 915 
+static_header_end                   0012e8'     A 914  A 915 
+static_header_len                   00000b      A 915  A 862 
+swwsr_ds0                           000006      B  73 
+swwsr_ds1                           000009      B  74 
+swwsr_is                            00000c      B  75  A 246  A 248  A 308 
+swwsr_ps0                           000000      B  71 
+swwsr_ps1                           000003      B  72 
+test_28                             000002      B 126 
+tlm_efo                             000008      B 163 
+tlm_ffo                             000004      B 162 
+tlm_hfo                             000010      B 164 
+transfer                               REF             A  19  A 660 
+transfer_table_sz                      REF             A  19  A  70 
+trm_28                              000001      B 125  A 556 
+tspc_Free                           008000      B 180 
+tspc_Rrdy                           000400      B 177 
+tspc_Soft                           004000      B 179 
+tspc_Xrdy                           000800      B 178 
+tspc_in0                            000100      B 175 
+tspc_in1                            000200      B 176 
+tspc_mcm                            000010      B 171 
+tspc_nRrst                          000080      B 174 
+tspc_nXrst                          000040      B 173 
+tspc_txm                            000020      B 172 
+wr_disc                             008000      B  48  A 106  A 157  A 227  A 547 
+                                                       A 577  A 592  A 731  A 747 
+                                                       A 775  A 783 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ago_v1.0.abs                                                         PAGE   29
+
+LABEL                                VALUE       DEFN    REF
+
+wr_dog                              00a000      B  49  A 107  A 735  A 813 
+wr_out                              00c000      B  50 
+wr_out0                             002000      B  44 
+wr_out1                             004000      B  45 
+wr_rd_fifo                          006000      B  47 
+wr_rs_rx                            000000      B  43  A 126  A 127  A 128  A 129 
+                                                       A 130  A 131 
+wr_rsv                              00e000      B  51 
+wr_rx                               004000      B  46 
+xh_skip                             001248'     A 777  A 772 

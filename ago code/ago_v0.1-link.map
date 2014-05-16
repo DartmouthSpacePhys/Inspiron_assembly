@@ -1,0 +1,253 @@
+******************************************************************************
+              TMS320C54x Linker PC v4.2.0                      
+******************************************************************************
+>> Linked Thu Jul 12 19:49:02 2012
+
+OUTPUT FILE NAME:   <ago_v0.1.out>
+ENTRY POINT SYMBOL: "RXDSP_START"  address: 0000142f
+
+
+MEMORY CONFIGURATION
+
+         name            origin    length      used     unused   attr    fill
+----------------------  --------  ---------  --------  --------  ----  --------
+PAGE 0:
+  INTR_TABLE            00000080   00000080  00000080  00000000  RW X
+  PROG_ANNEX            00000180   00000680  00000674  0000000c  R IX
+  PROG_MAIN             00000c00   00001200  00000e3b  000003c5  R IX
+
+PAGE 1:
+  STACK                 00000100   00000040  00000040  00000000  RW  
+  TEMP_DATA             00000140   00000040  00000006  0000003a  RW  
+  SBUFFER               00000800   00000400  000000c8  00000338  RW  
+  SCALES                00001e00   00000200  00000200  00000000  RW  
+  DATA                  00002000   00000800  00000800  00000000  RW  
+
+
+SECTION ALLOCATION MAP
+
+ output                                  attributes/
+section   page    origin      length       input sections
+--------  ----  ----------  ----------   ----------------
+.vectors   0    00000080    00000080     
+                  00000080    00000080     int_table.obj (.vectors)
+
+.bl549     0    00000180    0000004d     
+                  00000180    0000004d     bl549.obj (.bl549)
+
+.sine_tab 
+*          0    000001ce    000005ea     
+                  000001ce    000005ea     c512.obj (.sine_tab)
+
+.cbrev_p   0    000007b8    0000003d     
+                  000007b8    0000003d     Cbrev32.obj (.cbrev_p)
+
+.ad6620    0    00000c00    0000042f     
+                  00000c00    0000042f     ad6620.obj (.ad6620)
+
+.hann_tab 
+*          0    0000102f    00000400     
+                  0000102f    00000400     hann_q15.obj (.hann_tab)
+
+.text      0    0000142f    00000384     
+                  0000142f    00000232     ago_v0.1.obj (.text)
+                  00001661    00000152     cfft_32.obj (.text)
+
+.cfft_p    0    000017b3    000000bd     
+                  000017b3    000000bd     c512.obj (.cfft_p)
+
+.scale_p   0    00001870    00000087     
+                  00001870    00000087     scale.obj (.scale_p)
+
+.transfer_p 
+*          0    000018f7    0000006f     
+                  000018f7    0000006f     tabletransfer.obj (.transfer_p)
+
+.log10_p   0    00001966    0000005e     
+                  00001966    0000005e     log_10.obj (.log10_p)
+
+.dpsm_p    0    000019c4    00000030     
+                  000019c4    00000030     dpsm.obj (.dpsm_p)
+
+.sercook_p 
+*          0    000019f4    00000025     
+                  000019f4    00000025     sercook.obj (.sercook_p)
+
+.hann_p    0    00001a19    00000022     
+                  00001a19    00000022     hannwin.obj (.hann_p)
+
+.stack_v   1    00000100    00000040     UNINITIALIZED
+                  00000100    00000040     ago_v0.1.obj (.stack_v)
+
+.bss       1    00000140    00000006     UNINITIALIZED
+                  00000140    00000004     cfft_32.obj (.bss)
+                  00000144    00000002     ago_v0.1.obj (.bss)
+
+.sbuff_v   1    00000800    000000c8     UNINITIALIZED
+                  00000800    000000c8     ago_v0.1.obj (.sbuff_v)
+
+.scale_v   1    00001e00    00000200     UNINITIALIZED
+                  00001e00    00000200     ago_v0.1.obj (.scale_v)
+
+.data_v    1    00002000    00000800     UNINITIALIZED
+                  00002000    00000800     ago_v0.1.obj (.data_v)
+
+
+GLOBAL SYMBOLS: SORTED ALPHABETICALLY BY Name 
+
+address    name
+--------   ----
+00000140   .bss
+0000142f   .text
+00000180   BOOTLOAD_START
+0000142f   RXDSP_START
+00000140   Tempdw1
+00000142   Tempdw2
+ffffffff   ___binit__
+00000140   ___bss__
+ffffffff   ___c_args__
+ffffffff   ___cinit__
+00000146   ___end__
+000017b3   ___etext__
+ffffffff   ___pinit__
+0000142f   ___text__
+00000000   __lflags
+000007b8   _cbrev32
+000017b3   _cfft32_512
+000018d1   _descale
+0000102f   _hann_table
+00001a19   _hann_window
+00001966   _log_10
+000018a9   _log_prescale
+000019f4   _serial_cook
+000019c4   _sqmag
+00001870   _sqmag_prescale
+000015b8   abu_fill_start
+000015af   abu_first_half
+0000142f   ago_main
+ffffffff   binit
+000001b0   blskipskip
+0000159c   bridge_data
+0000148c   buff_init_loop
+ffffffff   cinit
+00001589   dp_end
+00000146   end
+000015f3   end_transfer
+000001c7   endboot
+000017b3   etext
+0000177c   fftButterfly
+00001661   fftStage1and2
+000016cb   fftStage3
+00001739   fftStageX
+00001621   int_nmi
+000014ad   major_loop
+0000189f   norm_ovm
+0000018b   par08_1
+ffffffff   pinit
+00001571   post_descale
+0000160f   post_sleep
+00001537   pre_abs
+00001502   pre_bit_rev
+00001563   pre_descale
+000014ca   pre_disc
+0000150d   pre_fft
+00001558   pre_log
+0000154a   pre_logps
+00001515   pre_move
+000014e0   pre_read
+0000160b   pre_sleep
+00001544   pre_sqmag
+00001529   pre_sqscale
+000014fc   pre_window
+000015ee   rawdata_loop
+00000c48   rsp_clear
+00000c12   rsp_freq
+00000c17   rsp_init
+00000c06   rsp_mstart
+00000c00   rsp_reset
+00000c0c   rsp_sstart
+000015f8   serial_transfer_end
+000018f7   transfer
+00000060   transfer_table_sz
+000001c5   xfr08
+
+
+GLOBAL SYMBOLS: SORTED BY Symbol Address 
+
+address    name
+--------   ----
+00000000   __lflags
+00000060   transfer_table_sz
+00000140   .bss
+00000140   Tempdw1
+00000140   ___bss__
+00000142   Tempdw2
+00000146   ___end__
+00000146   end
+00000180   BOOTLOAD_START
+0000018b   par08_1
+000001b0   blskipskip
+000001c5   xfr08
+000001c7   endboot
+000007b8   _cbrev32
+00000c00   rsp_reset
+00000c06   rsp_mstart
+00000c0c   rsp_sstart
+00000c12   rsp_freq
+00000c17   rsp_init
+00000c48   rsp_clear
+0000102f   _hann_table
+0000142f   .text
+0000142f   RXDSP_START
+0000142f   ___text__
+0000142f   ago_main
+0000148c   buff_init_loop
+000014ad   major_loop
+000014ca   pre_disc
+000014e0   pre_read
+000014fc   pre_window
+00001502   pre_bit_rev
+0000150d   pre_fft
+00001515   pre_move
+00001529   pre_sqscale
+00001537   pre_abs
+00001544   pre_sqmag
+0000154a   pre_logps
+00001558   pre_log
+00001563   pre_descale
+00001571   post_descale
+00001589   dp_end
+0000159c   bridge_data
+000015af   abu_first_half
+000015b8   abu_fill_start
+000015ee   rawdata_loop
+000015f3   end_transfer
+000015f8   serial_transfer_end
+0000160b   pre_sleep
+0000160f   post_sleep
+00001621   int_nmi
+00001661   fftStage1and2
+000016cb   fftStage3
+00001739   fftStageX
+0000177c   fftButterfly
+000017b3   ___etext__
+000017b3   _cfft32_512
+000017b3   etext
+00001870   _sqmag_prescale
+0000189f   norm_ovm
+000018a9   _log_prescale
+000018d1   _descale
+000018f7   transfer
+00001966   _log_10
+000019c4   _sqmag
+000019f4   _serial_cook
+00001a19   _hann_window
+ffffffff   ___binit__
+ffffffff   ___c_args__
+ffffffff   ___cinit__
+ffffffff   ___pinit__
+ffffffff   binit
+ffffffff   cinit
+ffffffff   pinit
+
+[73 symbols]

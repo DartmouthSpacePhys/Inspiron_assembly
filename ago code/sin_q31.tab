@@ -1,0 +1,1565 @@
+;***********************************************************
+; Version 2.20.01                                           
+;***********************************************************
+;============================================================================
+; Description:  32-bit 1024-point IFFT Twiddle Factors
+;
+; Author:  Mike Hannah,  Texas Instruments, Inc.,  May 14, 1998
+;
+;============================================================================
+	
+      .sect ".sine_tab"
+
+     .if N>8
+; STAGE 4
+cos4  .long   07641AF3Ch   ;  112.500 ø    07642h
+      .long   05A827999h   ;  135.000 ø    05a82h
+      .long   030FBC54Dh   ;  157.500 ø    030fch
+      .long   000000000h   ;  180.000 ø    00000h
+isin4 .long   0CF043AB3h   ;  202.500 ø    0cf04h
+      .long   0A57D8667h   ;  225.000 ø    0a57eh
+      .long   089BE50C4h   ;  247.500 ø    089beh
+      .long   080000000h   ;  270.000 ø    08000h
+      .long   089BE50C4h   ;  292.500 ø    089beh
+      .long   0A57D8667h   ;  315.000 ø    0a57eh
+      .long   0CF043AB3h   ;  337.500 ø    0cf04h
+      .long   000000000h   ;  360.000 ø    00000h
+	.endif
+
+     .if N>16
+; STAGE 5
+cos5  .long   07D8A5F3Fh   ;  101.250 ø    07d8ah
+      .long   07641AF3Ch   ;  112.500 ø    07642h
+      .long   06A6D98A4h   ;  123.750 ø    06a6eh
+      .long   05A827999h   ;  135.000 ø    05a82h
+      .long   0471CECE6h   ;  146.250 ø    0471dh
+      .long   030FBC54Dh   ;  157.500 ø    030fch
+      .long   018F8B83Ch   ;  168.750 ø    018f9h
+      .long   000000000h   ;  180.000 ø    00000h
+isin5 .long   0E70747C4h   ;  191.250 ø    0e707h
+      .long   0CF043AB3h   ;  202.500 ø    0cf04h
+      .long   0B8E3131Ah   ;  213.750 ø    0b8e3h
+      .long   0A57D8667h   ;  225.000 ø    0a57eh
+      .long   09592675Ch   ;  236.250 ø    09592h
+      .long   089BE50C4h   ;  247.500 ø    089beh
+      .long   08275A0C1h   ;  258.750 ø    08276h
+      .long   080000000h   ;  270.000 ø    08000h
+      .long   08275A0C1h   ;  281.250 ø    08276h
+      .long   089BE50C4h   ;  292.500 ø    089beh
+      .long   09592675Ch   ;  303.750 ø    09592h
+      .long   0A57D8667h   ;  315.000 ø    0a57eh
+      .long   0B8E3131Ah   ;  326.250 ø    0b8e3h
+      .long   0CF043AB3h   ;  337.500 ø    0cf04h
+      .long   0E70747C4h   ;  348.750 ø    0e707h
+      .long   000000000h   ;  360.000 ø    00000h
+	.endif
+
+     .if N>32
+; STAGE 6
+cos6  .long   07F62368Fh   ;   95.625 ø    07f62h
+      .long   07D8A5F3Fh   ;  101.250 ø    07d8ah
+      .long   07A7D055Bh   ;  106.875 ø    07a7dh
+      .long   07641AF3Ch   ;  112.500 ø    07642h
+      .long   070E2CBC6h   ;  118.125 ø    070e3h
+      .long   06A6D98A4h   ;  123.750 ø    06a6eh
+      .long   062F201ACh   ;  129.375 ø    062f2h
+      .long   05A827999h   ;  135.000 ø    05a82h
+      .long   05133CC94h   ;  140.625 ø    05134h
+      .long   0471CECE6h   ;  146.250 ø    0471dh
+      .long   03C56BA70h   ;  151.875 ø    03c57h
+      .long   030FBC54Dh   ;  157.500 ø    030fch
+      .long   025280C5Dh   ;  163.125 ø    02528h
+      .long   018F8B83Ch   ;  168.750 ø    018f9h
+      .long   00C8BD35Eh   ;  174.375 ø    00c8ch
+      .long   000000000h   ;  180.000 ø    00000h
+isin6 .long   0F3742CA2h   ;  185.625 ø    0f374h
+      .long   0E70747C4h   ;  191.250 ø    0e707h
+      .long   0DAD7F3A3h   ;  196.875 ø    0dad8h
+      .long   0CF043AB3h   ;  202.500 ø    0cf04h
+      .long   0C3A94590h   ;  208.125 ø    0c3a9h
+      .long   0B8E3131Ah   ;  213.750 ø    0b8e3h
+      .long   0AECC336Ch   ;  219.375 ø    0aecch
+      .long   0A57D8667h   ;  225.000 ø    0a57eh
+      .long   09D0DFE54h   ;  230.625 ø    09d0eh
+      .long   09592675Ch   ;  236.250 ø    09592h
+      .long   08F1D343Ah   ;  241.875 ø    08f1dh
+      .long   089BE50C4h   ;  247.500 ø    089beh
+      .long   08582FAA5h   ;  253.125 ø    08583h
+      .long   08275A0C1h   ;  258.750 ø    08276h
+      .long   0809DC971h   ;  264.375 ø    0809eh
+      .long   080000000h   ;               08000h
+      .long   0809DC971h   ;               0809eh
+      .long   08275A0C1h   ;               08276h
+      .long   08582FAA5h   ;               08583h
+      .long   089BE50C4h   ;               089beh
+      .long   08F1D343Ah   ;               08f1dh
+      .long   09592675Ch   ;               09592h
+      .long   09D0DFE54h   ;               09d0eh
+      .long   0A57D8667h   ;               0a57eh
+      .long   0AECC336Ch   ;               0aecch
+      .long   0B8E3131Ah   ;               0b8e3h
+      .long   0C3A94590h   ;               0c3a9h
+      .long   0CF043AB3h   ;               0cf04h
+      .long   0DAD7F3A3h   ;               0dad8h
+      .long   0E70747C4h   ;               0e707h
+      .long   0F3742CA2h   ;               0f374h
+      .long   000000000h   ;               00000h
+	.endif
+
+     .if N>64
+; STAGE 7
+cos7  .long   07FD8878Dh   ;   92.812 ø    07fd9h
+      .long   07F62368Fh   ;   95.625 ø    07f62h
+      .long   07E9D55FCh   ;   98.438 ø    07e9dh
+      .long   07D8A5F3Fh   ;  101.250 ø    07d8ah
+      .long   07C29FBEEh   ;  104.062 ø    07c2ah
+      .long   07A7D055Bh   ;  106.875 ø    07a7dh
+      .long   078848413h   ;  109.688 ø    07885h
+      .long   07641AF3Ch   ;  112.500 ø    07642h
+      .long   073B5EBD0h   ;  115.312 ø    073b6h
+      .long   070E2CBC6h   ;  118.125 ø    070e3h
+      .long   06DCA0D14h   ;  120.938 ø    06dcah
+      .long   06A6D98A4h   ;  123.750 ø    06a6eh
+      .long   066CF811Fh   ;  126.562 ø    066d0h
+      .long   062F201ACh   ;  129.375 ø    062f2h
+      .long   05ED77C89h   ;  132.188 ø    05ed7h
+      .long   05A827999h   ;  135.000 ø    05a82h
+      .long   055F5A4D2h   ;  137.812 ø    055f6h
+      .long   05133CC94h   ;  140.625 ø    05134h
+      .long   04C3FDFF3h   ;  143.438 ø    04c40h
+      .long   0471CECE6h   ;  146.250 ø    0471dh
+      .long   041CE1E64h   ;  149.062 ø    041ceh
+      .long   03C56BA70h   ;  151.875 ø    03c57h
+      .long   036BA2013h   ;  154.688 ø    036bah
+      .long   030FBC54Dh   ;  157.500 ø    030fch
+      .long   02B1F34EBh   ;  160.312 ø    02b1fh
+      .long   025280C5Dh   ;  163.125 ø    02528h
+      .long   01F19F97Bh   ;  165.938 ø    01f1ah
+      .long   018F8B83Ch   ;  168.750 ø    018f9h
+      .long   012C8106Eh   ;  171.562 ø    012c8h
+      .long   00C8BD35Eh   ;  174.375 ø    00c8ch
+      .long   00647D97Ch   ;  177.188 ø    00648h
+      .long   000000000h   ;  180.000 ø    00000h
+isin7 .long   0F9B82684h   ;  182.812 ø    0f9b8h
+      .long   0F3742CA2h   ;  185.625 ø    0f374h
+      .long   0ED37EF92h   ;  188.438 ø    0ed38h
+      .long   0E70747C4h   ;  191.250 ø    0e707h
+      .long   0E0E60685h   ;  194.062 ø    0e0e6h
+      .long   0DAD7F3A3h   ;  196.875 ø    0dad8h
+      .long   0D4E0CB15h   ;  199.688 ø    0d4e1h
+      .long   0CF043AB3h   ;  202.500 ø    0cf04h
+      .long   0C945DFEDh   ;  205.312 ø    0c946h
+      .long   0C3A94590h   ;  208.125 ø    0c3a9h
+      .long   0BE31E19Ch   ;  210.938 ø    0be32h
+      .long   0B8E3131Ah   ;  213.750 ø    0b8e3h
+      .long   0B3C0200Dh   ;  216.562 ø    0b3c0h
+      .long   0AECC336Ch   ;  219.375 ø    0aecch
+      .long   0AA0A5B2Eh   ;  222.188 ø    0aa0ah
+      .long   0A57D8667h   ;  225.000 ø    0a57eh
+      .long   0A1288377h   ;  227.812 ø    0a129h
+      .long   09D0DFE54h   ;  230.625 ø    09d0eh
+      .long   099307EE1h   ;  233.438 ø    09930h
+      .long   09592675Ch   ;  236.250 ø    09592h
+      .long   09235F2ECh   ;  239.062 ø    09236h
+      .long   08F1D343Ah   ;  241.875 ø    08f1dh
+      .long   08C4A1430h   ;  244.688 ø    08c4ah
+      .long   089BE50C4h   ;  247.500 ø    089beh
+      .long   0877B7BEDh   ;  250.312 ø    0877bh
+      .long   08582FAA5h   ;  253.125 ø    08583h
+      .long   083D60412h   ;  255.938 ø    083d6h
+      .long   08275A0C1h   ;  258.750 ø    08276h
+      .long   08162AA04h   ;  261.562 ø    08163h
+      .long   0809DC971h   ;  264.375 ø    0809eh
+      .long   080277873h   ;  267.188 ø    08027h
+      .long   080000000h   ;  270.000      08000h
+      .long   080277873h   ;  272.812      08027h
+      .long   0809DC971h   ;               0809eh
+      .long   08162AA04h   ;  261.562 ø    08163h
+      .long   08275A0C1h   ;  258.750 ø    08276h
+      .long   083D60412h   ;  255.938 ø    083d6h
+      .long   08582FAA5h   ;  253.125 ø    08583h
+      .long   0877B7BEDh   ;  250.312 ø    0877bh
+      .long   089BE50C4h   ;  247.500 ø    089beh
+      .long   08C4A1430h   ;  244.688 ø    08c4ah
+      .long   08F1D343Ah   ;  241.875 ø    08f1dh
+      .long   09235F2ECh   ;  239.062 ø    09236h
+      .long   09592675Ch   ;  236.250 ø    09592h
+      .long   099307EE1h   ;  233.438 ø    09930h
+      .long   09D0DFE54h   ;  230.625 ø    09d0eh
+      .long   0A1288377h   ;  227.812 ø    0a129h
+      .long   0A57D8667h   ;  225.000 ø    0a57eh
+      .long   0AA0A5B2Eh   ;  222.188 ø    0aa0ah
+      .long   0AECC336Ch   ;  219.375 ø    0aecch
+      .long   0B3C0200Dh   ;  216.562 ø    0b3c0h
+      .long   0B8E3131Ah   ;  213.750 ø    0b8e3h
+      .long   0BE31E19Ch   ;  210.938 ø    0be32h
+      .long   0C3A94590h   ;  208.125 ø    0c3a9h
+      .long   0C945DFEDh   ;  205.312 ø    0c946h
+      .long   0CF043AB3h   ;  202.500 ø    0cf04h
+      .long   0D4E0CB15h   ;  199.688 ø    0d4e1h
+      .long   0DAD7F3A3h   ;  196.875 ø    0dad8h
+      .long   0E0E60685h   ;  194.062 ø    0e0e6h
+      .long   0E70747C4h   ;  191.250 ø    0e707h
+      .long   0ED37EF92h   ;  188.438 ø    0ed38h
+      .long   0F3742CA2h   ;  185.625 ø    0f374h
+      .long   0F9B82684h   ;  182.812 ø    0f9b8h
+      .long   000000000h   ;  180.000 ø    00000h
+	.endif
+
+     .if N>128
+; STAGE 8
+cos8  .long   07FF62182h   ;  91.40625
+      .long   07FD8878Dh   ;  92.8125
+      .long   07FA736B4h   ;  94.21875
+      .long   07F62368Fh   ;  95.625
+      .long   07F0991C3h   ;  97.03125
+      .long   07E9D55FCh   ;  98.4375
+      .long   07E1D93E9h   ;  99.84375
+      .long   07D8A5F3Fh   ;  101.25
+      .long   07CE3CEB1h   ;  102.65625
+      .long   07C29FBEEh   ;  104.0625
+      .long   07B5D039Dh   ;  105.46875
+      .long   07A7D055Bh   ;  106.875
+      .long   0798A23B1h   ;  108.28125
+      .long   078848413h   ;  109.6875
+      .long   0776C4EDBh   ;  111.09375
+      .long   07641AF3Ch   ;  112.5
+      .long   07504D345h   ;  113.90625
+      .long   073B5EBD0h   ;  115.3125
+      .long   072552C84h   ;  116.71875
+      .long   070E2CBC6h   ;  118.125
+      .long   06F5F02B1h   ;  119.53125
+      .long   06DCA0D14h   ;  120.9375
+      .long   06C242960h   ;  122.34375
+      .long   06A6D98A4h   ;  123.75
+      .long   068A69E81h   ;  125.15625
+      .long   066CF811Fh   ;  126.5625
+      .long   064E88926h   ;  127.96875
+      .long   062F201ACh   ;  129.375
+      .long   060EC382Fh   ;  130.78125
+      .long   05ED77C89h   ;  132.1875
+      .long   05CB420DFh   ;  133.59375
+      .long   05A827999h   ;  135
+      .long   05842DD54h   ;  136.40625
+      .long   055F5A4D2h   ;  137.8125
+      .long   0539B2AEFh   ;  139.21875
+      .long   05133CC94h   ;  140.625
+      .long   04EBFE8A4h   ;  142.03125
+      .long   04C3FDFF3h   ;  143.4375
+      .long   049B41533h   ;  144.84375
+      .long   0471CECE6h   ;  146.25
+      .long   0447ACD50h   ;  147.65625
+      .long   041CE1E64h   ;  149.0625
+      .long   03F1749B7h   ;  150.46875
+      .long   03C56BA70h   ;  151.875
+      .long   0398CDD32h   ;  153.28125
+      .long   036BA2013h   ;  154.6875
+      .long   033DEF287h   ;  156.09375
+      .long   030FBC54Dh   ;  157.5
+      .long   02E110A61h   ;  158.90625
+      .long   02B1F34EBh   ;  160.3125
+      .long   02826B928h   ;  161.71875
+      .long   025280C5Dh   ;  163.125
+      .long   02223A4C5h   ;  164.53125
+      .long   01F19F97Bh   ;  165.9375
+      .long   01C0B826Ah   ;  167.34375
+      .long   018F8B83Ch   ;  168.75
+      .long   015E21444h   ;  170.15625
+      .long   012C8106Eh   ;  171.5625
+      .long   00FAB272Bh   ;  172.96875
+      .long   00C8BD35Eh   ;  174.375
+      .long   0096A9049h   ;  175.78125
+      .long   00647D97Ch   ;  177.1875
+      .long   003242ABEh   ;  178.59375
+      .long   000000000h   ;  180
+isin8 .long   0FCDBD542h   ;  181.40625
+      .long   0F9B82684h   ;  182.8125
+      .long   0F6956FB7h   ;  184.21875
+      .long   0F3742CA2h   ;  185.625
+      .long   0F054D8D5h   ;  187.03125
+      .long   0ED37EF92h   ;  188.4375
+      .long   0EA1DEBBCh   ;  189.84375
+      .long   0E70747C4h   ;  191.25
+      .long   0E3F47D96h   ;  192.65625
+      .long   0E0E60685h   ;  194.0625
+      .long   0DDDC5B3Bh   ;  195.46875
+      .long   0DAD7F3A3h   ;  196.875
+      .long   0D7D946D8h   ;  198.28125
+      .long   0D4E0CB15h   ;  199.6875
+      .long   0D1EEF59Fh   ;  201.09375
+      .long   0CF043AB3h   ;  202.5
+      .long   0CC210D79h   ;  203.90625
+      .long   0C945DFEDh   ;  205.3125
+      .long   0C67322CEh   ;  206.71875
+      .long   0C3A94590h   ;  208.125
+      .long   0C0E8B649h   ;  209.53125
+      .long   0BE31E19Ch   ;  210.9375
+      .long   0BB8532B0h   ;  212.34375
+      .long   0B8E3131Ah   ;  213.75
+      .long   0B64BEACDh   ;  215.15625
+      .long   0B3C0200Dh   ;  216.5625
+      .long   0B140175Ch   ;  217.96875
+      .long   0AECC336Ch   ;  219.375
+      .long   0AC64D511h   ;  220.78125
+      .long   0AA0A5B2Eh   ;  222.1875
+      .long   0A7BD22ACh   ;  223.59375
+      .long   0A57D8667h   ;  225
+      .long   0A34BDF21h   ;  226.40625
+      .long   0A1288377h   ;  227.8125
+      .long   09F13C7D1h   ;  229.21875
+      .long   09D0DFE54h   ;  230.625
+      .long   09B1776DAh   ;  232.03125
+      .long   099307EE1h   ;  233.4375
+      .long   09759617Fh   ;  234.84375
+      .long   09592675Ch   ;  236.25
+      .long   093DBD6A0h   ;  237.65625
+      .long   09235F2ECh   ;  239.0625
+      .long   090A0FD4Fh   ;  240.46875
+      .long   08F1D343Ah   ;  241.875
+      .long   08DAAD37Ch   ;  243.28125
+      .long   08C4A1430h   ;  244.6875
+      .long   08AFB2CBBh   ;  246.09375
+      .long   089BE50C4h   ;  247.5
+      .long   08893B125h   ;  248.90625
+      .long   0877B7BEDh   ;  250.3125
+      .long   08675DC4Fh   ;  251.71875
+      .long   08582FAA5h   ;  253.125
+      .long   084A2FC63h   ;  254.53125
+      .long   083D60412h   ;  255.9375
+      .long   0831C314Fh   ;  257.34375
+      .long   08275A0C1h   ;  258.75
+      .long   081E26C17h   ;  260.15625
+      .long   08162AA04h   ;  261.5625
+      .long   080F66E3Dh   ;  262.96875
+      .long   0809DC971h   ;  264.375
+      .long   08058C94Ch   ;  265.78125
+      .long   080277873h   ;  267.1875
+      .long   08009DE7Eh   ;  268.59375
+      .long   080000000h   ;  270
+      .long   08009DE7Eh   ;  268.59375
+      .long   080277873h   ;  267.1875
+      .long   08058C94Ch   ;  265.78125
+      .long   0809DC971h   ;  264.375
+      .long   080F66E3Dh   ;  262.96875
+      .long   08162AA04h   ;  261.5625
+      .long   081E26C17h   ;  260.15625
+      .long   08275A0C1h   ;  258.75
+      .long   0831C314Fh   ;  257.34375
+      .long   083D60412h   ;  255.9375
+      .long   084A2FC63h   ;  254.53125
+      .long   08582FAA5h   ;  253.125
+      .long   08675DC4Fh   ;  251.71875
+      .long   0877B7BEDh   ;  250.3125
+      .long   08893B125h   ;  248.90625
+      .long   089BE50C4h   ;  247.5
+      .long   08AFB2CBBh   ;  246.09375
+      .long   08C4A1430h   ;  244.6875
+      .long   08DAAD37Ch   ;  243.28125
+      .long   08F1D343Ah   ;  241.875
+      .long   090A0FD4Fh   ;  240.46875
+      .long   09235F2ECh   ;  239.0625
+      .long   093DBD6A0h   ;  237.65625
+      .long   09592675Ch   ;  236.25
+      .long   09759617Fh   ;  234.84375
+      .long   099307EE1h   ;  233.4375
+      .long   09B1776DAh   ;  232.03125
+      .long   09D0DFE54h   ;  230.625
+      .long   09F13C7D1h   ;  229.21875
+      .long   0A1288377h   ;  227.8125
+      .long   0A34BDF21h   ;  226.40625
+      .long   0A57D8667h   ;  225
+      .long   0A7BD22ACh   ;  223.59375
+      .long   0AA0A5B2Eh   ;  222.1875
+      .long   0AC64D511h   ;  220.78125
+      .long   0AECC336Ch   ;  219.375
+      .long   0B140175Ch   ;  217.96875
+      .long   0B3C0200Dh   ;  216.5625
+      .long   0B64BEACDh   ;  215.15625
+      .long   0B8E3131Ah   ;  213.75
+      .long   0BB8532B0h   ;  212.34375
+      .long   0BE31E19Ch   ;  210.9375
+      .long   0C0E8B649h   ;  209.53125
+      .long   0C3A94590h   ;  208.125
+      .long   0C67322CEh   ;  206.71875
+      .long   0C945DFEDh   ;  205.3125
+      .long   0CC210D79h   ;  203.90625
+      .long   0CF043AB3h   ;  202.5
+      .long   0D1EEF59Fh   ;  201.09375
+      .long   0D4E0CB15h   ;  199.6875
+      .long   0D7D946D8h   ;  198.28125
+      .long   0DAD7F3A3h   ;  196.875
+      .long   0DDDC5B3Bh   ;  195.46875
+      .long   0E0E60685h   ;  194.0625
+      .long   0E3F47D96h   ;  192.65625
+      .long   0E70747C4h   ;  191.25
+      .long   0EA1DEBBCh   ;  189.84375
+      .long   0ED37EF92h   ;  188.4375
+      .long   0F054D8D5h   ;  187.03125
+      .long   0F3742CA2h   ;  185.625
+      .long   0F6956FB7h   ;  184.21875
+      .long   0F9B82684h   ;  182.8125
+      .long   0FCDBD542h   ;  181.40625
+      .long   000000000h   ;  180
+	.endif
+
+     .if N>256
+; STAGE 9
+cos9  .long   07FFD885Ah   ;  90.703125
+      .long   07FF62182h   ;  91.40625
+      .long   07FE9CBBFh   ;  92.109375
+      .long   07FD8878Dh   ;  92.8125
+      .long   07FC25596h   ;  93.515625
+      .long   07FA736B4h   ;  94.21875
+      .long   07F872BF2h   ;  94.921875
+      .long   07F62368Fh   ;  95.625
+      .long   07F3857F5h   ;  96.328125
+      .long   07F0991C3h   ;  97.03125
+      .long   07ED5E5C6h   ;  97.734375
+      .long   07E9D55FCh   ;  98.4375
+      .long   07E5FE493h   ;  99.140625
+      .long   07E1D93E9h   ;  99.84375
+      .long   07DD6668Eh   ;  100.546875
+      .long   07D8A5F3Fh   ;  101.25
+      .long   07D3980ECh   ;  101.953125
+      .long   07CE3CEB1h   ;  102.65625
+      .long   07C894BDDh   ;  103.359375
+      .long   07C29FBEEh   ;  104.0625
+      .long   07BC5E28Fh   ;  104.765625
+      .long   07B5D039Dh   ;  105.46875
+      .long   07AEF6323h   ;  106.171875
+      .long   07A7D055Bh   ;  106.875
+      .long   07A05EEADh   ;  107.578125
+      .long   0798A23B1h   ;  108.28125
+      .long   07909A92Ch   ;  108.984375
+      .long   078848413h   ;  109.6875
+      .long   077FAB988h   ;  110.390625
+      .long   0776C4EDBh   ;  111.09375
+      .long   076D94988h   ;  111.796875
+      .long   07641AF3Ch   ;  112.5
+      .long   075A585CFh   ;  113.203125
+      .long   07504D345h   ;  113.90625
+      .long   0745F9DD0h   ;  114.609375
+      .long   073B5EBD0h   ;  115.3125
+      .long   07307C3CFh   ;  116.015625
+      .long   072552C84h   ;  116.71875
+      .long   0719E2CD2h   ;  117.421875
+      .long   070E2CBC6h   ;  118.125
+      .long   070231099h   ;  118.828125
+      .long   06F5F02B1h   ;  119.53125
+      .long   06E96A99Ch   ;  120.234375
+      .long   06DCA0D14h   ;  120.9375
+      .long   06CF934FBh   ;  121.640625
+      .long   06C242960h   ;  122.34375
+      .long   06B4AF278h   ;  123.046875
+      .long   06A6D98A4h   ;  123.75
+      .long   0698C246Ch   ;  124.453125
+      .long   068A69E81h   ;  125.15625
+      .long   067BD0FBCh   ;  125.859375
+      .long   066CF811Fh   ;  126.5625
+      .long   065DDFBD3h   ;  127.265625
+      .long   064E88926h   ;  127.96875
+      .long   063EF328Fh   ;  128.671875
+      .long   062F201ACh   ;  129.375
+      .long   061F1003Eh   ;  130.078125
+      .long   060EC382Fh   ;  130.78125
+      .long   05FE3B38Dh   ;  131.484375
+      .long   05ED77C89h   ;  132.1875
+      .long   05DC79D7Ch   ;  132.890625
+      .long   05CB420DFh   ;  133.59375
+      .long   05B9D1153h   ;  134.296875
+      .long   05A827999h   ;  135
+      .long   059646497h   ;  135.703125
+      .long   05842DD54h   ;  136.40625
+      .long   0571DEEF9h   ;  137.109375
+      .long   055F5A4D2h   ;  137.8125
+      .long   054CA0A4Ah   ;  138.515625
+      .long   0539B2AEFh   ;  139.21875
+      .long   05269126Eh   ;  139.921875
+      .long   05133CC94h   ;  140.625
+      .long   04FFB654Dh   ;  141.328125
+      .long   04EBFE8A4h   ;  142.03125
+      .long   04D8162C4h   ;  142.734375
+      .long   04C3FDFF3h   ;  143.4375
+      .long   04AFB6C97h   ;  144.140625
+      .long   049B41533h   ;  144.84375
+      .long   04869E664h   ;  145.546875
+      .long   0471CECE6h   ;  146.25
+      .long   045CD358Fh   ;  146.953125
+      .long   0447ACD50h   ;  147.65625
+      .long   04325C135h   ;  148.359375
+      .long   041CE1E64h   ;  149.0625
+      .long   04073F21Dh   ;  149.765625
+      .long   03F1749B7h   ;  150.46875
+      .long   03DB832A5h   ;  151.171875
+      .long   03C56BA70h   ;  151.875
+      .long   03AF2EEB7h   ;  152.578125
+      .long   0398CDD32h   ;  153.28125
+      .long   0382493B0h   ;  153.984375
+      .long   036BA2013h   ;  154.6875
+      .long   0354D9056h   ;  155.390625
+      .long   033DEF287h   ;  156.09375
+      .long   0326E54C7h   ;  156.796875
+      .long   030FBC54Dh   ;  157.5
+      .long   02F875262h   ;  158.203125
+      .long   02E110A61h   ;  158.90625
+      .long   02C98FBBAh   ;  159.609375
+      .long   02B1F34EBh   ;  160.3125
+      .long   029A3C484h   ;  161.015625
+      .long   02826B928h   ;  161.71875
+      .long   026A82185h   ;  162.421875
+      .long   025280C5Dh   ;  163.125
+      .long   023A6887Eh   ;  163.828125
+      .long   02223A4C5h   ;  164.53125
+      .long   0209F701Ch   ;  165.234375
+      .long   01F19F97Bh   ;  165.9375
+      .long   01D934FE5h   ;  166.640625
+      .long   01C0B826Ah   ;  167.34375
+      .long   01A82A025h   ;  168.046875
+      .long   018F8B83Ch   ;  168.75
+      .long   0176DD9DEh   ;  169.453125
+      .long   015E21444h   ;  170.15625
+      .long   0145576B1h   ;  170.859375
+      .long   012C8106Eh   ;  171.5625
+      .long   01139F0CEh   ;  172.265625
+      .long   00FAB272Bh   ;  172.96875
+      .long   00E1BC2E3h   ;  173.671875
+      .long   00C8BD35Eh   ;  174.375
+      .long   00AFB6805h   ;  175.078125
+      .long   0096A9049h   ;  175.78125
+      .long   007D95B9Eh   ;  176.484375
+      .long   00647D97Ch   ;  177.1875
+      .long   004B6195Dh   ;  177.890625
+      .long   003242ABEh   ;  178.59375
+      .long   001921D1Fh   ;  179.296875
+      .long   000000000h   ;  180
+isin9 .long   0FE6DE2E1h   ;  180.703125
+      .long   0FCDBD542h   ;  181.40625
+      .long   0FB49E6A3h   ;  182.109375
+      .long   0F9B82684h   ;  182.8125
+      .long   0F826A462h   ;  183.515625
+      .long   0F6956FB7h   ;  184.21875
+      .long   0F50497FBh   ;  184.921875
+      .long   0F3742CA2h   ;  185.625
+      .long   0F1E43D1Dh   ;  186.328125
+      .long   0F054D8D5h   ;  187.03125
+      .long   0EEC60F32h   ;  187.734375
+      .long   0ED37EF92h   ;  188.4375
+      .long   0EBAA894Fh   ;  189.140625
+      .long   0EA1DEBBCh   ;  189.84375
+      .long   0E8922622h   ;  190.546875
+      .long   0E70747C4h   ;  191.25
+      .long   0E57D5FDBh   ;  191.953125
+      .long   0E3F47D96h   ;  192.65625
+      .long   0E26CB01Bh   ;  193.359375
+      .long   0E0E60685h   ;  194.0625
+      .long   0DF608FE4h   ;  194.765625
+      .long   0DDDC5B3Bh   ;  195.46875
+      .long   0DC597782h   ;  196.171875
+      .long   0DAD7F3A3h   ;  196.875
+      .long   0D957DE7Bh   ;  197.578125
+      .long   0D7D946D8h   ;  198.28125
+      .long   0D65C3B7Ch   ;  198.984375
+      .long   0D4E0CB15h   ;  199.6875
+      .long   0D3670446h   ;  200.390625
+      .long   0D1EEF59Fh   ;  201.09375
+      .long   0D078AD9Eh   ;  201.796875
+      .long   0CF043AB3h   ;  202.5
+      .long   0CD91AB39h   ;  203.203125
+      .long   0CC210D79h   ;  203.90625
+      .long   0CAB26FAAh   ;  204.609375
+      .long   0C945DFEDh   ;  205.3125
+      .long   0C7DB6C50h   ;  206.015625
+      .long   0C67322CEh   ;  206.71875
+      .long   0C50D1149h   ;  207.421875
+      .long   0C3A94590h   ;  208.125
+      .long   0C247CD5Bh   ;  208.828125
+      .long   0C0E8B649h   ;  209.53125
+      .long   0BF8C0DE3h   ;  210.234375
+      .long   0BE31E19Ch   ;  210.9375
+      .long   0BCDA3ECBh   ;  211.640625
+      .long   0BB8532B0h   ;  212.34375
+      .long   0BA32CA71h   ;  213.046875
+      .long   0B8E3131Ah   ;  213.75
+      .long   0B796199Ch   ;  214.453125
+      .long   0B64BEACDh   ;  215.15625
+      .long   0B5049369h   ;  215.859375
+      .long   0B3C0200Dh   ;  216.5625
+      .long   0B27E9D3Ch   ;  217.265625
+      .long   0B140175Ch   ;  217.96875
+      .long   0B0049AB3h   ;  218.671875
+      .long   0AECC336Ch   ;  219.375
+      .long   0AD96ED92h   ;  220.078125
+      .long   0AC64D511h   ;  220.78125
+      .long   0AB35F5B6h   ;  221.484375
+      .long   0AA0A5B2Eh   ;  222.1875
+      .long   0A8E21107h   ;  222.890625
+      .long   0A7BD22ACh   ;  223.59375
+      .long   0A69B9B69h   ;  224.296875
+      .long   0A57D8667h   ;  225
+      .long   0A462EEADh   ;  225.703125
+      .long   0A34BDF21h   ;  226.40625
+      .long   0A2386284h   ;  227.109375
+      .long   0A1288377h   ;  227.8125
+      .long   0A01C4C73h   ;  228.515625
+      .long   09F13C7D1h   ;  229.21875
+      .long   09E0EFFC2h   ;  229.921875
+      .long   09D0DFE54h   ;  230.625
+      .long   09C10CD71h   ;  231.328125
+      .long   09B1776DAh   ;  232.03125
+      .long   09A22042Dh   ;  232.734375
+      .long   099307EE1h   ;  233.4375
+      .long   09842F044h   ;  234.140625
+      .long   09759617Fh   ;  234.84375
+      .long   09673DB94h   ;  235.546875
+      .long   09592675Ch   ;  236.25
+      .long   094B50D88h   ;  236.953125
+      .long   093DBD6A0h   ;  237.65625
+      .long   09306CB05h   ;  238.359375
+      .long   09235F2ECh   ;  239.0625
+      .long   091695664h   ;  239.765625
+      .long   090A0FD4Fh   ;  240.46875
+      .long   08FDCEF67h   ;  241.171875
+      .long   08F1D343Ah   ;  241.875
+      .long   08E61D32Eh   ;  242.578125
+      .long   08DAAD37Ch   ;  243.28125
+      .long   08CF83C31h   ;  243.984375
+      .long   08C4A1430h   ;  244.6875
+      .long   08BA06230h   ;  245.390625
+      .long   08AFB2CBBh   ;  246.09375
+      .long   08A5A7A31h   ;  246.796875
+      .long   089BE50C4h   ;  247.5
+      .long   08926B678h   ;  248.203125
+      .long   08893B125h   ;  248.90625
+      .long   088054678h   ;  249.609375
+      .long   0877B7BEDh   ;  250.3125
+      .long   086F656D4h   ;  251.015625
+      .long   08675DC4Fh   ;  251.71875
+      .long   085FA1153h   ;  252.421875
+      .long   08582FAA5h   ;  253.125
+      .long   085109CDDh   ;  253.828125
+      .long   084A2FC63h   ;  254.53125
+      .long   0843A1D71h   ;  255.234375
+      .long   083D60412h   ;  255.9375
+      .long   08376B423h   ;  256.640625
+      .long   0831C314Fh   ;  257.34375
+      .long   082C67F14h   ;  258.046875
+      .long   08275A0C1h   ;  258.75
+      .long   082299972h   ;  259.453125
+      .long   081E26C17h   ;  260.15625
+      .long   081A01B6Dh   ;  260.859375
+      .long   08162AA04h   ;  261.5625
+      .long   0812A1A3Ah   ;  262.265625
+      .long   080F66E3Dh   ;  262.96875
+      .long   080C7A80Bh   ;  263.671875
+      .long   0809DC971h   ;  264.375
+      .long   08078D40Eh   ;  265.078125
+      .long   08058C94Ch   ;  265.78125
+      .long   0803DAA6Ah   ;  266.484375
+      .long   080277873h   ;  267.1875
+      .long   080163441h   ;  267.890625
+      .long   08009DE7Eh   ;  268.59375
+      .long   0800277A6h   ;  269.296875
+      .long   080000000h   ;  270
+      .long   0800277A6h   ;  269.296875
+      .long   08009DE7Eh   ;  268.59375
+      .long   080163441h   ;  267.890625
+      .long   080277873h   ;  267.1875
+      .long   0803DAA6Ah   ;  266.484375
+      .long   08058C94Ch   ;  265.78125
+      .long   08078D40Eh   ;  265.078125
+      .long   0809DC971h   ;  264.375
+      .long   080C7A80Bh   ;  263.671875
+      .long   080F66E3Dh   ;  262.96875
+      .long   0812A1A3Ah   ;  262.265625
+      .long   08162AA04h   ;  261.5625
+      .long   081A01B6Dh   ;  260.859375
+      .long   081E26C17h   ;  260.15625
+      .long   082299972h   ;  259.453125
+      .long   08275A0C1h   ;  258.75
+      .long   082C67F14h   ;  258.046875
+      .long   0831C314Fh   ;  257.34375
+      .long   08376B423h   ;  256.640625
+      .long   083D60412h   ;  255.9375
+      .long   0843A1D71h   ;  255.234375
+      .long   084A2FC63h   ;  254.53125
+      .long   085109CDDh   ;  253.828125
+      .long   08582FAA5h   ;  253.125
+      .long   085FA1153h   ;  252.421875
+      .long   08675DC4Fh   ;  251.71875
+      .long   086F656D4h   ;  251.015625
+      .long   0877B7BEDh   ;  250.3125
+      .long   088054678h   ;  249.609375
+      .long   08893B125h   ;  248.90625
+      .long   08926B678h   ;  248.203125
+      .long   089BE50C4h   ;  247.5
+      .long   08A5A7A31h   ;  246.796875
+      .long   08AFB2CBBh   ;  246.09375
+      .long   08BA06230h   ;  245.390625
+      .long   08C4A1430h   ;  244.6875
+      .long   08CF83C31h   ;  243.984375
+      .long   08DAAD37Ch   ;  243.28125
+      .long   08E61D32Eh   ;  242.578125
+      .long   08F1D343Ah   ;  241.875
+      .long   08FDCEF67h   ;  241.171875
+      .long   090A0FD4Fh   ;  240.46875
+      .long   091695664h   ;  239.765625
+      .long   09235F2ECh   ;  239.0625
+      .long   09306CB05h   ;  238.359375
+      .long   093DBD6A0h   ;  237.65625
+      .long   094B50D88h   ;  236.953125
+      .long   09592675Ch   ;  236.25
+      .long   09673DB94h   ;  235.546875
+      .long   09759617Fh   ;  234.84375
+      .long   09842F044h   ;  234.140625
+      .long   099307EE1h   ;  233.4375
+      .long   09A22042Dh   ;  232.734375
+      .long   09B1776DAh   ;  232.03125
+      .long   09C10CD71h   ;  231.328125
+      .long   09D0DFE54h   ;  230.625
+      .long   09E0EFFC2h   ;  229.921875
+      .long   09F13C7D1h   ;  229.21875
+      .long   0A01C4C73h   ;  228.515625
+      .long   0A1288377h   ;  227.8125
+      .long   0A2386284h   ;  227.109375
+      .long   0A34BDF21h   ;  226.40625
+      .long   0A462EEADh   ;  225.703125
+      .long   0A57D8667h   ;  225
+      .long   0A69B9B69h   ;  224.296875
+      .long   0A7BD22ACh   ;  223.59375
+      .long   0A8E21107h   ;  222.890625
+      .long   0AA0A5B2Eh   ;  222.1875
+      .long   0AB35F5B6h   ;  221.484375
+      .long   0AC64D511h   ;  220.78125
+      .long   0AD96ED92h   ;  220.078125
+      .long   0AECC336Ch   ;  219.375
+      .long   0B0049AB3h   ;  218.671875
+      .long   0B140175Ch   ;  217.96875
+      .long   0B27E9D3Ch   ;  217.265625
+      .long   0B3C0200Dh   ;  216.5625
+      .long   0B5049369h   ;  215.859375
+      .long   0B64BEACDh   ;  215.15625
+      .long   0B796199Ch   ;  214.453125
+      .long   0B8E3131Ah   ;  213.75
+      .long   0BA32CA71h   ;  213.046875
+      .long   0BB8532B0h   ;  212.34375
+      .long   0BCDA3ECBh   ;  211.640625
+      .long   0BE31E19Ch   ;  210.9375
+      .long   0BF8C0DE3h   ;  210.234375
+      .long   0C0E8B649h   ;  209.53125
+      .long   0C247CD5Bh   ;  208.828125
+      .long   0C3A94590h   ;  208.125
+      .long   0C50D1149h   ;  207.421875
+      .long   0C67322CEh   ;  206.71875
+      .long   0C7DB6C50h   ;  206.015625
+      .long   0C945DFEDh   ;  205.3125
+      .long   0CAB26FAAh   ;  204.609375
+      .long   0CC210D79h   ;  203.90625
+      .long   0CD91AB39h   ;  203.203125
+      .long   0CF043AB3h   ;  202.5
+      .long   0D078AD9Eh   ;  201.796875
+      .long   0D1EEF59Fh   ;  201.09375
+      .long   0D3670446h   ;  200.390625
+      .long   0D4E0CB15h   ;  199.6875
+      .long   0D65C3B7Ch   ;  198.984375
+      .long   0D7D946D8h   ;  198.28125
+      .long   0D957DE7Bh   ;  197.578125
+      .long   0DAD7F3A3h   ;  196.875
+      .long   0DC597782h   ;  196.171875
+      .long   0DDDC5B3Bh   ;  195.46875
+      .long   0DF608FE4h   ;  194.765625
+      .long   0E0E60685h   ;  194.0625
+      .long   0E26CB01Bh   ;  193.359375
+      .long   0E3F47D96h   ;  192.65625
+      .long   0E57D5FDBh   ;  191.953125
+      .long   0E70747C4h   ;  191.25
+      .long   0E8922622h   ;  190.546875
+      .long   0EA1DEBBCh   ;  189.84375
+      .long   0EBAA894Fh   ;  189.140625
+      .long   0ED37EF92h   ;  188.4375
+      .long   0EEC60F32h   ;  187.734375
+      .long   0F054D8D5h   ;  187.03125
+      .long   0F1E43D1Dh   ;  186.328125
+      .long   0F3742CA2h   ;  185.625
+      .long   0F50497FBh   ;  184.921875
+      .long   0F6956FB7h   ;  184.21875
+      .long   0F826A462h   ;  183.515625
+      .long   0F9B82684h   ;  182.8125
+      .long   0FB49E6A3h   ;  182.109375
+      .long   0FCDBD542h   ;  181.40625
+      .long   0FE6DE2E1h   ;  180.703125
+      .long   000000000h   ;  180
+	.endif
+
+     .if N>512
+; STAGE 10
+cos10 .long   07FFF6216h   ;  90.3515625
+      .long   07FFD885Ah   ;  90.703125
+      .long   07FFA72D1h   ;  91.0546875
+      .long   07FF62182h   ;  91.40625
+      .long   07FF09477h   ;  91.7578125
+      .long   07FE9CBBFh   ;  92.109375
+      .long   07FE1C76Bh   ;  92.4609375
+      .long   07FD8878Dh   ;  92.8125
+      .long   07FCE0C3Eh   ;  93.1640625
+      .long   07FC25596h   ;  93.515625
+      .long   07FB563B2h   ;  93.8671875
+      .long   07FA736B4h   ;  94.21875
+      .long   07F97CEBCh   ;  94.5703125
+      .long   07F872BF2h   ;  94.921875
+      .long   07F754E7Fh   ;  95.2734375
+      .long   07F62368Fh   ;  95.625
+      .long   07F4DE450h   ;  95.9765625
+      .long   07F3857F5h   ;  96.328125
+      .long   07F2191B3h   ;  96.6796875
+      .long   07F0991C3h   ;  97.03125
+      .long   07EF0585Fh   ;  97.3828125
+      .long   07ED5E5C6h   ;  97.734375
+      .long   07EBA3A39h   ;  98.0859375
+      .long   07E9D55FCh   ;  98.4375
+      .long   07E7F3956h   ;  98.7890625
+      .long   07E5FE493h   ;  99.140625
+      .long   07E3F57FEh   ;  99.4921875
+      .long   07E1D93E9h   ;  99.84375
+      .long   07DFA98A7h   ;  100.1953125
+      .long   07DD6668Eh   ;  100.546875
+      .long   07DB0FDF7h   ;  100.8984375
+      .long   07D8A5F3Fh   ;  101.25
+      .long   07D628AC5h   ;  101.6015625
+      .long   07D3980ECh   ;  101.953125
+      .long   07D0F4217h   ;  102.3046875
+      .long   07CE3CEB1h   ;  102.65625
+      .long   07CB72724h   ;  103.0078125
+      .long   07C894BDDh   ;  103.359375
+      .long   07C5A3D4Fh   ;  103.7109375
+      .long   07C29FBEEh   ;  104.0625
+      .long   07BF88830h   ;  104.4140625
+      .long   07BC5E28Fh   ;  104.765625
+      .long   07B920B89h   ;  105.1171875
+      .long   07B5D039Dh   ;  105.46875
+      .long   07B26CB4Fh   ;  105.8203125
+      .long   07AEF6323h   ;  106.171875
+      .long   07AB6CBA3h   ;  106.5234375
+      .long   07A7D055Bh   ;  106.875
+      .long   07A4210D8h   ;  107.2265625
+      .long   07A05EEADh   ;  107.578125
+      .long   079C89F6Dh   ;  107.9296875
+      .long   0798A23B1h   ;  108.28125
+      .long   0794A7C11h   ;  108.6328125
+      .long   07909A92Ch   ;  108.984375
+      .long   078C7ABA1h   ;  109.3359375
+      .long   078848413h   ;  109.6875
+      .long   078403328h   ;  110.0390625
+      .long   077FAB988h   ;  110.390625
+      .long   077B417DFh   ;  110.7421875
+      .long   0776C4EDBh   ;  111.09375
+      .long   077235F2Dh   ;  111.4453125
+      .long   076D94988h   ;  111.796875
+      .long   0768E0EA5h   ;  112.1484375
+      .long   07641AF3Ch   ;  112.5
+      .long   075F42C0Ah   ;  112.8515625
+      .long   075A585CFh   ;  113.203125
+      .long   07555BD4Bh   ;  113.5546875
+      .long   07504D345h   ;  113.90625
+      .long   074B2C883h   ;  114.2578125
+      .long   0745F9DD0h   ;  114.609375
+      .long   0740B53FAh   ;  114.9609375
+      .long   073B5EBD0h   ;  115.3125
+      .long   0735F6626h   ;  115.6640625
+      .long   07307C3CFh   ;  116.015625
+      .long   072AF05A6h   ;  116.3671875
+      .long   072552C84h   ;  116.71875
+      .long   071FA3948h   ;  117.0703125
+      .long   0719E2CD2h   ;  117.421875
+      .long   071410804h   ;  117.7734375
+      .long   070E2CBC6h   ;  118.125
+      .long   0708378FEh   ;  118.4765625
+      .long   070231099h   ;  118.828125
+      .long   06FC19385h   ;  119.1796875
+      .long   06F5F02B1h   ;  119.53125
+      .long   06EFB5F12h   ;  119.8828125
+      .long   06E96A99Ch   ;  120.234375
+      .long   06E30E349h   ;  120.5859375
+      .long   06DCA0D14h   ;  120.9375
+      .long   06D6227FAh   ;  121.2890625
+      .long   06CF934FBh   ;  121.640625
+      .long   06C8F351Ch   ;  121.9921875
+      .long   06C242960h   ;  122.34375
+      .long   06BB812D0h   ;  122.6953125
+      .long   06B4AF278h   ;  123.046875
+      .long   06ADCC964h   ;  123.3984375
+      .long   06A6D98A4h   ;  123.75
+      .long   069FD614Ah   ;  124.1015625
+      .long   0698C246Ch   ;  124.453125
+      .long   06919E320h   ;  124.8046875
+      .long   068A69E81h   ;  125.15625
+      .long   0683257AAh   ;  125.5078125
+      .long   067BD0FBCh   ;  125.859375
+      .long   06746C7D7h   ;  126.2109375
+      .long   066CF811Fh   ;  126.5625
+      .long   066573CBBh   ;  126.9140625
+      .long   065DDFBD3h   ;  127.265625
+      .long   06563BF92h   ;  127.6171875
+      .long   064E88926h   ;  127.96875
+      .long   0646C59BFh   ;  128.3203125
+      .long   063EF328Fh   ;  128.671875
+      .long   0637114CCh   ;  129.0234375
+      .long   062F201ACh   ;  129.375
+      .long   06271FA69h   ;  129.7265625
+      .long   061F1003Eh   ;  130.078125
+      .long   0616F146Bh   ;  130.4296875
+      .long   060EC382Fh   ;  130.78125
+      .long   060686CCEh   ;  131.1328125
+      .long   05FE3B38Dh   ;  131.484375
+      .long   05F5E0DB3h   ;  131.8359375
+      .long   05ED77C89h   ;  132.1875
+      .long   05E50015Dh   ;  132.5390625
+      .long   05DC79D7Ch   ;  132.890625
+      .long   05D3E5236h   ;  133.2421875
+      .long   05CB420DFh   ;  133.59375
+      .long   05C290ACCh   ;  133.9453125
+      .long   05B9D1153h   ;  134.296875
+      .long   05B1035CFh   ;  134.6484375
+      .long   05A827999h   ;  135
+      .long   059F3DE12h   ;  135.3515625
+      .long   059646497h   ;  135.703125
+      .long   058D40E8Ch   ;  136.0546875
+      .long   05842DD54h   ;  136.40625
+      .long   057B0D256h   ;  136.7578125
+      .long   0571DEEF9h   ;  137.109375
+      .long   0568A34A9h   ;  137.4609375
+      .long   055F5A4D2h   ;  137.8125
+      .long   0556040E2h   ;  138.1640625
+      .long   054CA0A4Ah   ;  138.515625
+      .long   05433027Dh   ;  138.8671875
+      .long   0539B2AEFh   ;  139.21875
+      .long   053028517h   ;  139.5703125
+      .long   05269126Eh   ;  139.921875
+      .long   051CED46Eh   ;  140.2734375
+      .long   05133CC94h   ;  140.625
+      .long   05097FC5Eh   ;  140.9765625
+      .long   04FFB654Dh   ;  141.328125
+      .long   04F5E08E3h   ;  141.6796875
+      .long   04EBFE8A4h   ;  142.03125
+      .long   04E210617h   ;  142.3828125
+      .long   04D8162C4h   ;  142.734375
+      .long   04CE10034h   ;  143.0859375
+      .long   04C3FDFF3h   ;  143.4375
+      .long   04B9E038Fh   ;  143.7890625
+      .long   04AFB6C97h   ;  144.140625
+      .long   04A581C9Dh   ;  144.4921875
+      .long   049B41533h   ;  144.84375
+      .long   0490F57EEh   ;  145.1953125
+      .long   04869E664h   ;  145.546875
+      .long   047C3C22Eh   ;  145.8984375
+      .long   0471CECE6h   ;  146.25
+      .long   046756827h   ;  146.6015625
+      .long   045CD358Fh   ;  146.953125
+      .long   0452456BCh   ;  147.3046875
+      .long   0447ACD50h   ;  147.65625
+      .long   043D09AECh   ;  148.0078125
+      .long   04325C135h   ;  148.359375
+      .long   0427A41D0h   ;  148.7109375
+      .long   041CE1E64h   ;  149.0625
+      .long   04121589Ah   ;  149.4140625
+      .long   04073F21Dh   ;  149.765625
+      .long   03FC5EC97h   ;  150.1171875
+      .long   03F1749B7h   ;  150.46875
+      .long   03E680B2Ch   ;  150.8203125
+      .long   03DB832A5h   ;  151.171875
+      .long   03D07C1D5h   ;  151.5234375
+      .long   03C56BA70h   ;  151.875
+      .long   03BA51E29h   ;  152.2265625
+      .long   03AF2EEB7h   ;  152.578125
+      .long   03A402DD1h   ;  152.9296875
+      .long   0398CDD32h   ;  153.28125
+      .long   038D8FE93h   ;  153.6328125
+      .long   0382493B0h   ;  153.984375
+      .long   0376F9E46h   ;  154.3359375
+      .long   036BA2013h   ;  154.6875
+      .long   036041AD8h   ;  155.0390625
+      .long   0354D9056h   ;  155.390625
+      .long   03496824Fh   ;  155.7421875
+      .long   033DEF287h   ;  156.09375
+      .long   03326E2C2h   ;  156.4453125
+      .long   0326E54C7h   ;  156.796875
+      .long   031B54A5Dh   ;  157.1484375
+      .long   030FBC54Dh   ;  157.5
+      .long   03041C760h   ;  157.8515625
+      .long   02F875262h   ;  158.203125
+      .long   02ECC681Eh   ;  158.5546875
+      .long   02E110A61h   ;  158.90625
+      .long   02D553AFBh   ;  159.2578125
+      .long   02C98FBBAh   ;  159.609375
+      .long   02BDC4E6Fh   ;  159.9609375
+      .long   02B1F34EBh   ;  160.3125
+      .long   02A61B101h   ;  160.6640625
+      .long   029A3C484h   ;  161.015625
+      .long   028E5714Ah   ;  161.3671875
+      .long   02826B928h   ;  161.71875
+      .long   027679DF4h   ;  162.0703125
+      .long   026A82185h   ;  162.421875
+      .long   025E845B5h   ;  162.7734375
+      .long   025280C5Dh   ;  163.125
+      .long   024677757h   ;  163.4765625
+      .long   023A6887Eh   ;  163.828125
+      .long   022E541AEh   ;  164.1796875
+      .long   02223A4C5h   ;  164.53125
+      .long   02161B39Fh   ;  164.8828125
+      .long   0209F701Ch   ;  165.234375
+      .long   01FDCDC1Ah   ;  165.5859375
+      .long   01F19F97Bh   ;  165.9375
+      .long   01E56CA1Eh   ;  166.2890625
+      .long   01D934FE5h   ;  166.640625
+      .long   01CCF8CB3h   ;  166.9921875
+      .long   01C0B826Ah   ;  167.34375
+      .long   01B4732EFh   ;  167.6953125
+      .long   01A82A025h   ;  168.046875
+      .long   019BDCBF2h   ;  168.3984375
+      .long   018F8B83Ch   ;  168.75
+      .long   0183366E8h   ;  169.1015625
+      .long   0176DD9DEh   ;  169.453125
+      .long   016A81304h   ;  169.8046875
+      .long   015E21444h   ;  170.15625
+      .long   0151BDF85h   ;  170.5078125
+      .long   0145576B1h   ;  170.859375
+      .long   0138EDBB0h   ;  171.2109375
+      .long   012C8106Eh   ;  171.5625
+      .long   0120116D4h   ;  171.9140625
+      .long   01139F0CEh   ;  172.265625
+      .long   01072A047h   ;  172.6171875
+      .long   00FAB272Bh   ;  172.96875
+      .long   00EE38765h   ;  173.3203125
+      .long   00E1BC2E3h   ;  173.671875
+      .long   00D53DB92h   ;  174.0234375
+      .long   00C8BD35Eh   ;  174.375
+      .long   00BC3AC35h   ;  174.7265625
+      .long   00AFB6805h   ;  175.078125
+      .long   00A3308BCh   ;  175.4296875
+      .long   0096A9049h   ;  175.78125
+      .long   008A2009Ah   ;  176.1328125
+      .long   007D95B9Eh   ;  176.484375
+      .long   00710A344h   ;  176.8359375
+      .long   00647D97Ch   ;  177.1875
+      .long   0057F0034h   ;  177.5390625
+      .long   004B6195Dh   ;  177.890625
+      .long   003ED26E6h   ;  178.2421875
+      .long   003242ABEh   ;  178.59375
+      .long   0025B26D7h   ;  178.9453125
+      .long   001921D1Fh   ;  179.296875
+      .long   000C90F87h   ;  179.6484375
+      .long   000000000h   ;  180
+isin10 .long   0FF36F079h   ;  180.3515625
+      .long   0FE6DE2E1h   ;  180.703125
+      .long   0FDA4D929h   ;  181.0546875
+      .long   0FCDBD542h   ;  181.40625
+      .long   0FC12D91Ah   ;  181.7578125
+      .long   0FB49E6A3h   ;  182.109375
+      .long   0FA80FFCCh   ;  182.4609375
+      .long   0F9B82684h   ;  182.8125
+      .long   0F8EF5CBCh   ;  183.1640625
+      .long   0F826A462h   ;  183.515625
+      .long   0F75DFF66h   ;  183.8671875
+      .long   0F6956FB7h   ;  184.21875
+      .long   0F5CCF744h   ;  184.5703125
+      .long   0F50497FBh   ;  184.921875
+      .long   0F43C53CBh   ;  185.2734375
+      .long   0F3742CA2h   ;  185.625
+      .long   0F2AC246Eh   ;  185.9765625
+      .long   0F1E43D1Dh   ;  186.328125
+      .long   0F11C789Bh   ;  186.6796875
+      .long   0F054D8D5h   ;  187.03125
+      .long   0EF8D5FB9h   ;  187.3828125
+      .long   0EEC60F32h   ;  187.734375
+      .long   0EDFEE92Ch   ;  188.0859375
+      .long   0ED37EF92h   ;  188.4375
+      .long   0EC712450h   ;  188.7890625
+      .long   0EBAA894Fh   ;  189.140625
+      .long   0EAE4207Bh   ;  189.4921875
+      .long   0EA1DEBBCh   ;  189.84375
+      .long   0E957ECFCh   ;  190.1953125
+      .long   0E8922622h   ;  190.546875
+      .long   0E7CC9918h   ;  190.8984375
+      .long   0E70747C4h   ;  191.25
+      .long   0E642340Eh   ;  191.6015625
+      .long   0E57D5FDBh   ;  191.953125
+      .long   0E4B8CD11h   ;  192.3046875
+      .long   0E3F47D96h   ;  192.65625
+      .long   0E330734Dh   ;  193.0078125
+      .long   0E26CB01Bh   ;  193.359375
+      .long   0E1A935E2h   ;  193.7109375
+      .long   0E0E60685h   ;  194.0625
+      .long   0E02323E6h   ;  194.4140625
+      .long   0DF608FE4h   ;  194.765625
+      .long   0DE9E4C61h   ;  195.1171875
+      .long   0DDDC5B3Bh   ;  195.46875
+      .long   0DD1ABE52h   ;  195.8203125
+      .long   0DC597782h   ;  196.171875
+      .long   0DB9888A9h   ;  196.5234375
+      .long   0DAD7F3A3h   ;  196.875
+      .long   0DA17BA4Bh   ;  197.2265625
+      .long   0D957DE7Bh   ;  197.578125
+      .long   0D898620Ch   ;  197.9296875
+      .long   0D7D946D8h   ;  198.28125
+      .long   0D71A8EB6h   ;  198.6328125
+      .long   0D65C3B7Ch   ;  198.984375
+      .long   0D59E4EFFh   ;  199.3359375
+      .long   0D4E0CB15h   ;  199.6875
+      .long   0D423B191h   ;  200.0390625
+      .long   0D3670446h   ;  200.390625
+      .long   0D2AAC505h   ;  200.7421875
+      .long   0D1EEF59Fh   ;  201.09375
+      .long   0D13397E2h   ;  201.4453125
+      .long   0D078AD9Eh   ;  201.796875
+      .long   0CFBE38A0h   ;  202.1484375
+      .long   0CF043AB3h   ;  202.5
+      .long   0CE4AB5A3h   ;  202.8515625
+      .long   0CD91AB39h   ;  203.203125
+      .long   0CCD91D3Eh   ;  203.5546875
+      .long   0CC210D79h   ;  203.90625
+      .long   0CB697DB1h   ;  204.2578125
+      .long   0CAB26FAAh   ;  204.609375
+      .long   0C9FBE528h   ;  204.9609375
+      .long   0C945DFEDh   ;  205.3125
+      .long   0C89061BAh   ;  205.6640625
+      .long   0C7DB6C50h   ;  206.015625
+      .long   0C727016Dh   ;  206.3671875
+      .long   0C67322CEh   ;  206.71875
+      .long   0C5BFD22Fh   ;  207.0703125
+      .long   0C50D1149h   ;  207.421875
+      .long   0C45AE1D7h   ;  207.7734375
+      .long   0C3A94590h   ;  208.125
+      .long   0C2F83E2Bh   ;  208.4765625
+      .long   0C247CD5Bh   ;  208.828125
+      .long   0C197F4D4h   ;  209.1796875
+      .long   0C0E8B649h   ;  209.53125
+      .long   0C03A1369h   ;  209.8828125
+      .long   0BF8C0DE3h   ;  210.234375
+      .long   0BEDEA766h   ;  210.5859375
+      .long   0BE31E19Ch   ;  210.9375
+      .long   0BD85BE30h   ;  211.2890625
+      .long   0BCDA3ECBh   ;  211.640625
+      .long   0BC2F6514h   ;  211.9921875
+      .long   0BB8532B0h   ;  212.34375
+      .long   0BADBA944h   ;  212.6953125
+      .long   0BA32CA71h   ;  213.046875
+      .long   0B98A97D9h   ;  213.3984375
+      .long   0B8E3131Ah   ;  213.75
+      .long   0B83C3DD2h   ;  214.1015625
+      .long   0B796199Ch   ;  214.453125
+      .long   0B6F0A812h   ;  214.8046875
+      .long   0B64BEACDh   ;  215.15625
+      .long   0B5A7E363h   ;  215.5078125
+      .long   0B5049369h   ;  215.859375
+      .long   0B461FC71h   ;  216.2109375
+      .long   0B3C0200Dh   ;  216.5625
+      .long   0B31EFFCCh   ;  216.9140625
+      .long   0B27E9D3Ch   ;  217.265625
+      .long   0B1DEF9E9h   ;  217.6171875
+      .long   0B140175Ch   ;  217.96875
+      .long   0B0A1F71Dh   ;  218.3203125
+      .long   0B0049AB3h   ;  218.671875
+      .long   0AF6803A2h   ;  219.0234375
+      .long   0AECC336Ch   ;  219.375
+      .long   0AE312B92h   ;  219.7265625
+      .long   0AD96ED92h   ;  220.078125
+      .long   0ACFD7AE9h   ;  220.4296875
+      .long   0AC64D511h   ;  220.78125
+      .long   0ABCCFD83h   ;  221.1328125
+      .long   0AB35F5B6h   ;  221.484375
+      .long   0AA9FBF1Eh   ;  221.8359375
+      .long   0AA0A5B2Eh   ;  222.1875
+      .long   0A975CB57h   ;  222.5390625
+      .long   0A8E21107h   ;  222.890625
+      .long   0A84F2DAAh   ;  223.2421875
+      .long   0A7BD22ACh   ;  223.59375
+      .long   0A72BF174h   ;  223.9453125
+      .long   0A69B9B69h   ;  224.296875
+      .long   0A60C21EEh   ;  224.6484375
+      .long   0A57D8667h   ;  225
+      .long   0A4EFCA31h   ;  225.3515625
+      .long   0A462EEADh   ;  225.703125
+      .long   0A3D6F534h   ;  226.0546875
+      .long   0A34BDF21h   ;  226.40625
+      .long   0A2C1ADCAh   ;  226.7578125
+      .long   0A2386284h   ;  227.109375
+      .long   0A1AFFEA3h   ;  227.4609375
+      .long   0A1288377h   ;  227.8125
+      .long   0A0A1F24Dh   ;  228.1640625
+      .long   0A01C4C73h   ;  228.515625
+      .long   09F979332h   ;  228.8671875
+      .long   09F13C7D1h   ;  229.21875
+      .long   09E90EB95h   ;  229.5703125
+      .long   09E0EFFC2h   ;  229.921875
+      .long   09D8E0597h   ;  230.2734375
+      .long   09D0DFE54h   ;  230.625
+      .long   09C8EEB34h   ;  230.9765625
+      .long   09C10CD71h   ;  231.328125
+      .long   09B93A641h   ;  231.6796875
+      .long   09B1776DAh   ;  232.03125
+      .long   09A9C406Eh   ;  232.3828125
+      .long   09A22042Dh   ;  232.734375
+      .long   099A8C345h   ;  233.0859375
+      .long   099307EE1h   ;  233.4375
+      .long   098B93829h   ;  233.7890625
+      .long   09842F044h   ;  234.140625
+      .long   097CDA856h   ;  234.4921875
+      .long   09759617Fh   ;  234.84375
+      .long   096E61CE0h   ;  235.1953125
+      .long   09673DB94h   ;  235.546875
+      .long   096029EB6h   ;  235.8984375
+      .long   09592675Ch   ;  236.25
+      .long   09523369Ch   ;  236.6015625
+      .long   094B50D88h   ;  236.953125
+      .long   09447ED30h   ;  237.3046875
+      .long   093DBD6A0h   ;  237.65625
+      .long   09370CAE4h   ;  238.0078125
+      .long   09306CB05h   ;  238.359375
+      .long   0929DD806h   ;  238.7109375
+      .long   09235F2ECh   ;  239.0625
+      .long   091CF1CB7h   ;  239.4140625
+      .long   091695664h   ;  239.765625
+      .long   09104A0EEh   ;  240.1171875
+      .long   090A0FD4Fh   ;  240.46875
+      .long   0903E6C7Bh   ;  240.8203125
+      .long   08FDCEF67h   ;  241.171875
+      .long   08F7C8702h   ;  241.5234375
+      .long   08F1D343Ah   ;  241.875
+      .long   08EBEF7FCh   ;  242.2265625
+      .long   08E61D32Eh   ;  242.578125
+      .long   08E05C6B8h   ;  242.9296875
+      .long   08DAAD37Ch   ;  243.28125
+      .long   08D50FA5Ah   ;  243.6328125
+      .long   08CF83C31h   ;  243.984375
+      .long   08CA099DAh   ;  244.3359375
+      .long   08C4A1430h   ;  244.6875
+      .long   08BF4AC06h   ;  245.0390625
+      .long   08BA06230h   ;  245.390625
+      .long   08B4D377Dh   ;  245.7421875
+      .long   08AFB2CBBh   ;  246.09375
+      .long   08AAA42B5h   ;  246.4453125
+      .long   08A5A7A31h   ;  246.796875
+      .long   08A0BD3F6h   ;  247.1484375
+      .long   089BE50C4h   ;  247.5
+      .long   08971F15Bh   ;  247.8515625
+      .long   08926B678h   ;  248.203125
+      .long   088DCA0D3h   ;  248.5546875
+      .long   08893B125h   ;  248.90625
+      .long   0884BE821h   ;  249.2578125
+      .long   088054678h   ;  249.609375
+      .long   087BFCCD8h   ;  249.9609375
+      .long   0877B7BEDh   ;  250.3125
+      .long   08738545Fh   ;  250.6640625
+      .long   086F656D4h   ;  251.015625
+      .long   086B583EFh   ;  251.3671875
+      .long   08675DC4Fh   ;  251.71875
+      .long   086376093h   ;  252.0703125
+      .long   085FA1153h   ;  252.421875
+      .long   085BDEF28h   ;  252.7734375
+      .long   08582FAA5h   ;  253.125
+      .long   08549345Dh   ;  253.4765625
+      .long   085109CDDh   ;  253.828125
+      .long   084D934B1h   ;  254.1796875
+      .long   084A2FC63h   ;  254.53125
+      .long   0846DF477h   ;  254.8828125
+      .long   0843A1D71h   ;  255.234375
+      .long   0840777D0h   ;  255.5859375
+      .long   083D60412h   ;  255.9375
+      .long   083A5C2B1h   ;  256.2890625
+      .long   08376B423h   ;  256.640625
+      .long   08348D8DCh   ;  256.9921875
+      .long   0831C314Fh   ;  257.34375
+      .long   082F0BDE9h   ;  257.6953125
+      .long   082C67F14h   ;  258.046875
+      .long   0829D753Bh   ;  258.3984375
+      .long   08275A0C1h   ;  258.75
+      .long   0824F0209h   ;  259.1015625
+      .long   082299972h   ;  259.453125
+      .long   082056759h   ;  259.8046875
+      .long   081E26C17h   ;  260.15625
+      .long   081C0A802h   ;  260.5078125
+      .long   081A01B6Dh   ;  260.859375
+      .long   08180C6AAh   ;  261.2109375
+      .long   08162AA04h   ;  261.5625
+      .long   08145C5C7h   ;  261.9140625
+      .long   0812A1A3Ah   ;  262.265625
+      .long   0810FA7A1h   ;  262.6171875
+      .long   080F66E3Dh   ;  262.96875
+      .long   080DE6E4Dh   ;  263.3203125
+      .long   080C7A80Bh   ;  263.671875
+      .long   080B21BB0h   ;  264.0234375
+      .long   0809DC971h   ;  264.375
+      .long   0808AB181h   ;  264.7265625
+      .long   08078D40Eh   ;  265.078125
+      .long   080683144h   ;  265.4296875
+      .long   08058C94Ch   ;  265.78125
+      .long   0804A9C4Eh   ;  266.1328125
+      .long   0803DAA6Ah   ;  266.484375
+      .long   08031F3C2h   ;  266.8359375
+      .long   080277873h   ;  267.1875
+      .long   0801E3895h   ;  267.5390625
+      .long   080163441h   ;  267.890625
+      .long   0800F6B89h   ;  268.2421875
+      .long   08009DE7Eh   ;  268.59375
+      .long   080058D2Fh   ;  268.9453125
+      .long   0800277A6h   ;  269.296875
+      .long   080009DEAh   ;  269.6484375
+      .long   080000000h   ;  270
+      .long   080009DEAh   ;  269.6484375
+      .long   0800277A6h   ;  269.296875
+      .long   080058D2Fh   ;  268.9453125
+      .long   08009DE7Eh   ;  268.59375
+      .long   0800F6B89h   ;  268.2421875
+      .long   080163441h   ;  267.890625
+      .long   0801E3895h   ;  267.5390625
+      .long   080277873h   ;  267.1875
+      .long   08031F3C2h   ;  266.8359375
+      .long   0803DAA6Ah   ;  266.484375
+      .long   0804A9C4Eh   ;  266.1328125
+      .long   08058C94Ch   ;  265.78125
+      .long   080683144h   ;  265.4296875
+      .long   08078D40Eh   ;  265.078125
+      .long   0808AB181h   ;  264.7265625
+      .long   0809DC971h   ;  264.375
+      .long   080B21BB0h   ;  264.0234375
+      .long   080C7A80Bh   ;  263.671875
+      .long   080DE6E4Dh   ;  263.3203125
+      .long   080F66E3Dh   ;  262.96875
+      .long   0810FA7A1h   ;  262.6171875
+      .long   0812A1A3Ah   ;  262.265625
+      .long   08145C5C7h   ;  261.9140625
+      .long   08162AA04h   ;  261.5625
+      .long   08180C6AAh   ;  261.2109375
+      .long   081A01B6Dh   ;  260.859375
+      .long   081C0A802h   ;  260.5078125
+      .long   081E26C17h   ;  260.15625
+      .long   082056759h   ;  259.8046875
+      .long   082299972h   ;  259.453125
+      .long   0824F0209h   ;  259.1015625
+      .long   08275A0C1h   ;  258.75
+      .long   0829D753Bh   ;  258.3984375
+      .long   082C67F14h   ;  258.046875
+      .long   082F0BDE9h   ;  257.6953125
+      .long   0831C314Fh   ;  257.34375
+      .long   08348D8DCh   ;  256.9921875
+      .long   08376B423h   ;  256.640625
+      .long   083A5C2B1h   ;  256.2890625
+      .long   083D60412h   ;  255.9375
+      .long   0840777D0h   ;  255.5859375
+      .long   0843A1D71h   ;  255.234375
+      .long   0846DF477h   ;  254.8828125
+      .long   084A2FC63h   ;  254.53125
+      .long   084D934B1h   ;  254.1796875
+      .long   085109CDDh   ;  253.828125
+      .long   08549345Dh   ;  253.4765625
+      .long   08582FAA5h   ;  253.125
+      .long   085BDEF28h   ;  252.7734375
+      .long   085FA1153h   ;  252.421875
+      .long   086376093h   ;  252.0703125
+      .long   08675DC4Fh   ;  251.71875
+      .long   086B583EFh   ;  251.3671875
+      .long   086F656D4h   ;  251.015625
+      .long   08738545Fh   ;  250.6640625
+      .long   0877B7BEDh   ;  250.3125
+      .long   087BFCCD8h   ;  249.9609375
+      .long   088054678h   ;  249.609375
+      .long   0884BE821h   ;  249.2578125
+      .long   08893B125h   ;  248.90625
+      .long   088DCA0D3h   ;  248.5546875
+      .long   08926B678h   ;  248.203125
+      .long   08971F15Bh   ;  247.8515625
+      .long   089BE50C4h   ;  247.5
+      .long   08A0BD3F6h   ;  247.1484375
+      .long   08A5A7A31h   ;  246.796875
+      .long   08AAA42B5h   ;  246.4453125
+      .long   08AFB2CBBh   ;  246.09375
+      .long   08B4D377Dh   ;  245.7421875
+      .long   08BA06230h   ;  245.390625
+      .long   08BF4AC06h   ;  245.0390625
+      .long   08C4A1430h   ;  244.6875
+      .long   08CA099DAh   ;  244.3359375
+      .long   08CF83C31h   ;  243.984375
+      .long   08D50FA5Ah   ;  243.6328125
+      .long   08DAAD37Ch   ;  243.28125
+      .long   08E05C6B8h   ;  242.9296875
+      .long   08E61D32Eh   ;  242.578125
+      .long   08EBEF7FCh   ;  242.2265625
+      .long   08F1D343Ah   ;  241.875
+      .long   08F7C8702h   ;  241.5234375
+      .long   08FDCEF67h   ;  241.171875
+      .long   0903E6C7Bh   ;  240.8203125
+      .long   090A0FD4Fh   ;  240.46875
+      .long   09104A0EEh   ;  240.1171875
+      .long   091695664h   ;  239.765625
+      .long   091CF1CB7h   ;  239.4140625
+      .long   09235F2ECh   ;  239.0625
+      .long   0929DD806h   ;  238.7109375
+      .long   09306CB05h   ;  238.359375
+      .long   09370CAE4h   ;  238.0078125
+      .long   093DBD6A0h   ;  237.65625
+      .long   09447ED30h   ;  237.3046875
+      .long   094B50D88h   ;  236.953125
+      .long   09523369Ch   ;  236.6015625
+      .long   09592675Ch   ;  236.25
+      .long   096029EB6h   ;  235.8984375
+      .long   09673DB94h   ;  235.546875
+      .long   096E61CE0h   ;  235.1953125
+      .long   09759617Fh   ;  234.84375
+      .long   097CDA856h   ;  234.4921875
+      .long   09842F044h   ;  234.140625
+      .long   098B93829h   ;  233.7890625
+      .long   099307EE1h   ;  233.4375
+      .long   099A8C345h   ;  233.0859375
+      .long   09A22042Dh   ;  232.734375
+      .long   09A9C406Eh   ;  232.3828125
+      .long   09B1776DAh   ;  232.03125
+      .long   09B93A641h   ;  231.6796875
+      .long   09C10CD71h   ;  231.328125
+      .long   09C8EEB34h   ;  230.9765625
+      .long   09D0DFE54h   ;  230.625
+      .long   09D8E0597h   ;  230.2734375
+      .long   09E0EFFC2h   ;  229.921875
+      .long   09E90EB95h   ;  229.5703125
+      .long   09F13C7D1h   ;  229.21875
+      .long   09F979332h   ;  228.8671875
+      .long   0A01C4C73h   ;  228.515625
+      .long   0A0A1F24Dh   ;  228.1640625
+      .long   0A1288377h   ;  227.8125
+      .long   0A1AFFEA3h   ;  227.4609375
+      .long   0A2386284h   ;  227.109375
+      .long   0A2C1ADCAh   ;  226.7578125
+      .long   0A34BDF21h   ;  226.40625
+      .long   0A3D6F534h   ;  226.0546875
+      .long   0A462EEADh   ;  225.703125
+      .long   0A4EFCA31h   ;  225.3515625
+      .long   0A57D8667h   ;  225
+      .long   0A60C21EEh   ;  224.6484375
+      .long   0A69B9B69h   ;  224.296875
+      .long   0A72BF174h   ;  223.9453125
+      .long   0A7BD22ACh   ;  223.59375
+      .long   0A84F2DAAh   ;  223.2421875
+      .long   0A8E21107h   ;  222.890625
+      .long   0A975CB57h   ;  222.5390625
+      .long   0AA0A5B2Eh   ;  222.1875
+      .long   0AA9FBF1Eh   ;  221.8359375
+      .long   0AB35F5B6h   ;  221.484375
+      .long   0ABCCFD83h   ;  221.1328125
+      .long   0AC64D511h   ;  220.78125
+      .long   0ACFD7AE9h   ;  220.4296875
+      .long   0AD96ED92h   ;  220.078125
+      .long   0AE312B92h   ;  219.7265625
+      .long   0AECC336Ch   ;  219.375
+      .long   0AF6803A2h   ;  219.0234375
+      .long   0B0049AB3h   ;  218.671875
+      .long   0B0A1F71Dh   ;  218.3203125
+      .long   0B140175Ch   ;  217.96875
+      .long   0B1DEF9E9h   ;  217.6171875
+      .long   0B27E9D3Ch   ;  217.265625
+      .long   0B31EFFCCh   ;  216.9140625
+      .long   0B3C0200Dh   ;  216.5625
+      .long   0B461FC71h   ;  216.2109375
+      .long   0B5049369h   ;  215.859375
+      .long   0B5A7E363h   ;  215.5078125
+      .long   0B64BEACDh   ;  215.15625
+      .long   0B6F0A812h   ;  214.8046875
+      .long   0B796199Ch   ;  214.453125
+      .long   0B83C3DD2h   ;  214.1015625
+      .long   0B8E3131Ah   ;  213.75
+      .long   0B98A97D9h   ;  213.3984375
+      .long   0BA32CA71h   ;  213.046875
+      .long   0BADBA944h   ;  212.6953125
+      .long   0BB8532B0h   ;  212.34375
+      .long   0BC2F6514h   ;  211.9921875
+      .long   0BCDA3ECBh   ;  211.640625
+      .long   0BD85BE30h   ;  211.2890625
+      .long   0BE31E19Ch   ;  210.9375
+      .long   0BEDEA766h   ;  210.5859375
+      .long   0BF8C0DE3h   ;  210.234375
+      .long   0C03A1369h   ;  209.8828125
+      .long   0C0E8B649h   ;  209.53125
+      .long   0C197F4D4h   ;  209.1796875
+      .long   0C247CD5Bh   ;  208.828125
+      .long   0C2F83E2Bh   ;  208.4765625
+      .long   0C3A94590h   ;  208.125
+      .long   0C45AE1D7h   ;  207.7734375
+      .long   0C50D1149h   ;  207.421875
+      .long   0C5BFD22Fh   ;  207.0703125
+      .long   0C67322CEh   ;  206.71875
+      .long   0C727016Dh   ;  206.3671875
+      .long   0C7DB6C50h   ;  206.015625
+      .long   0C89061BAh   ;  205.6640625
+      .long   0C945DFEDh   ;  205.3125
+      .long   0C9FBE528h   ;  204.9609375
+      .long   0CAB26FAAh   ;  204.609375
+      .long   0CB697DB1h   ;  204.2578125
+      .long   0CC210D79h   ;  203.90625
+      .long   0CCD91D3Eh   ;  203.5546875
+      .long   0CD91AB39h   ;  203.203125
+      .long   0CE4AB5A3h   ;  202.8515625
+      .long   0CF043AB3h   ;  202.5
+      .long   0CFBE38A0h   ;  202.1484375
+      .long   0D078AD9Eh   ;  201.796875
+      .long   0D13397E2h   ;  201.4453125
+      .long   0D1EEF59Fh   ;  201.09375
+      .long   0D2AAC505h   ;  200.7421875
+      .long   0D3670446h   ;  200.390625
+      .long   0D423B191h   ;  200.0390625
+      .long   0D4E0CB15h   ;  199.6875
+      .long   0D59E4EFFh   ;  199.3359375
+      .long   0D65C3B7Ch   ;  198.984375
+      .long   0D71A8EB6h   ;  198.6328125
+      .long   0D7D946D8h   ;  198.28125
+      .long   0D898620Ch   ;  197.9296875
+      .long   0D957DE7Bh   ;  197.578125
+      .long   0DA17BA4Bh   ;  197.2265625
+      .long   0DAD7F3A3h   ;  196.875
+      .long   0DB9888A9h   ;  196.5234375
+      .long   0DC597782h   ;  196.171875
+      .long   0DD1ABE52h   ;  195.8203125
+      .long   0DDDC5B3Bh   ;  195.46875
+      .long   0DE9E4C61h   ;  195.1171875
+      .long   0DF608FE4h   ;  194.765625
+      .long   0E02323E6h   ;  194.4140625
+      .long   0E0E60685h   ;  194.0625
+      .long   0E1A935E2h   ;  193.7109375
+      .long   0E26CB01Bh   ;  193.359375
+      .long   0E330734Dh   ;  193.0078125
+      .long   0E3F47D96h   ;  192.65625
+      .long   0E4B8CD11h   ;  192.3046875
+      .long   0E57D5FDBh   ;  191.953125
+      .long   0E642340Eh   ;  191.6015625
+      .long   0E70747C4h   ;  191.25
+      .long   0E7CC9918h   ;  190.8984375
+      .long   0E8922622h   ;  190.546875
+      .long   0E957ECFCh   ;  190.1953125
+      .long   0EA1DEBBCh   ;  189.84375
+      .long   0EAE4207Bh   ;  189.4921875
+      .long   0EBAA894Fh   ;  189.140625
+      .long   0EC712450h   ;  188.7890625
+      .long   0ED37EF92h   ;  188.4375
+      .long   0EDFEE92Ch   ;  188.0859375
+      .long   0EEC60F32h   ;  187.734375
+      .long   0EF8D5FB9h   ;  187.3828125
+      .long   0F054D8D5h   ;  187.03125
+      .long   0F11C789Bh   ;  186.6796875
+      .long   0F1E43D1Dh   ;  186.328125
+      .long   0F2AC246Eh   ;  185.9765625
+      .long   0F3742CA2h   ;  185.625
+      .long   0F43C53CBh   ;  185.2734375
+      .long   0F50497FBh   ;  184.921875
+      .long   0F5CCF744h   ;  184.5703125
+      .long   0F6956FB7h   ;  184.21875
+      .long   0F75DFF66h   ;  183.8671875
+      .long   0F826A462h   ;  183.515625
+      .long   0F8EF5CBCh   ;  183.1640625
+      .long   0F9B82684h   ;  182.8125
+      .long   0FA80FFCCh   ;  182.4609375
+      .long   0FB49E6A3h   ;  182.109375
+      .long   0FC12D91Ah   ;  181.7578125
+      .long   0FCDBD542h   ;  181.40625
+      .long   0FDA4D929h   ;  181.0546875
+      .long   0FE6DE2E1h   ;  180.703125
+      .long   0FF36F079h   ;  180.3515625
+      .long   000000000h   ;  180
+	.endif
+
+SIN45   .long   05A827999h ;twiddle used for stage 3 fft and ifft

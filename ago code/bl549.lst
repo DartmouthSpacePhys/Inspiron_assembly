@@ -1,0 +1,269 @@
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+bl549.abs                                                            PAGE    1
+
+      69 000000                 .text
+      70                        .copy       "bl549.asm"
+ A     1              ************************************************************
+ A     2              *** Bootloader software version N0. : 1.0 ***
+ A     3              *** Last revision date : 10/23/1996 ***
+ A     4              *** Author : J. Chyan ***
+ A     5              ************************************************************
+ A     6              ** **
+ A     7              ** Boot Loader Program **
+ A     8              ** **
+ A     9              ** This code segment sets up and executes boot loader **
+ A    10              ** code based upon data saved in data memory **
+ A    11              ** **
+ A    12              ** WRITTEN BY: Jason Chyan **
+ A    13              ** DATE: 06/06/96 **
+ A    14              ** **
+ A    15              ** Revision History **
+ A    16              ** 1.0 Change HPI boot from c542 boot loader **
+ A    17              ** Implement Paralle Boot (EPROM) YGC 06/07/96 **
+ A    18              ** **
+ A    19              ** 1.1 Implement Serial Port Boot YGC 06/17/96 **
+ A    20              ** 1.2 Implement I/O Boot YGC 06/20/96 **
+ A    21              ** 1.3 Add A–law, u–law, sinwave and **
+ A    22              ** interrupt vectors table YGC 06/25/96 **
+ A    23              ** 1.4 Registers reprogrammable in I/O mode YGC 06/25/96 **
+ A    24              ** 1.5 Implement TDM mode & ABSP mode YGC 10/23/96 **
+ A    25              ** 1.6 Fix the SP (steak point) bug YGC 10/24/96 **
+ A    26              ** 1.7 Fix the BSP bug YGC 01/16/96 **
+ A    27              ** 1.8 Fix the dest. address in par8/16 TNG 03/24/96 **
+ A    28              ** 1.9 Fix the bugs in BSP/ABU mode TNG 08/28/97 **
+ A    29              ** 1.91 Fix the hi byte bug in par8 mode TNG 12/10/97 **
+ A    30              * 1.92 Fix the par8 mode bug PMJ2 11/09/98 **
+ A    31              ************************************************************
+ A    32              
+ A    33              ************************************************************
+ A    34              ;.title ”bootc54LP”
+ A    35              **********************************************************
+ A    36              * symbol definitions
+ A    37              **********************************************************
+ A    38 000000       .mnolist
+ A    39              
+ A    40              ; Let's use some scratchpad memory!  Woo!
+ A    41        0060  brs     .set    60h ; boot routine select (configuration word)
+ A    42        0061  xentry  .set    61h ; XPC of entry point
+ A    43        0062  entry   .set    62h ; entry point
+ A    44        0063  hbyte   .set    63h ; high byte of 8–bit serial word
+ A    45        0064  p8word  .set    64h ; concatenator for 8–bit memory load
+ A    46        0065  src     .set    65h ; source address
+ A    47        0066  dest    .set    66h ; destination address (dmov from above)
+ A    48        0067  lngth   .set    67h ; code length
+ A    49        0068  temp0   .set    68h ; temporary register0
+ A    50        0069  temp1   .set    69h ; temporary register1
+ A    51        006A  temp2   .set    6ah ; temporary register2
+ A    52        006B  temp3   .set    6bh ; temporary register3
+ A    53        006C  nmintv  .set    6ch ; non–maskable interrupt vector
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+bl549.abs                                                            PAGE    2
+
+ A    54        006D  sp_ifr  .set    6dh ; SP IFR temp reg
+ A    55              * MMR definition for c54xlp CPU register
+ A    56              **
+ A    57        0001  ifr     .set    01h
+ A    58        0006  st0             .set    06h
+ A    59        0007  st1     .set    07h
+ A    60        0008  AL              .set    08h
+ A    61        0009  AH              .set    09h
+ A    62        000A  AG              .set    0Ah
+ A    63        001A  brc     .set    1ah
+ A    64        001D  pmst    .set    1dh
+ A    65        0028  swwsr   .set    28h
+ A    66        0029  bscr    .set    29h
+ A    67              
+ A    68              
+ A    69              * * * * * * * * * * * * * * * * * * * * * * * * *
+ A    70              *       Bootload from 8–bit memory, MS byte first     *
+ A    71              * * * * * * * * * * * * * * * * * * * * * * * * *
+ A    72              
+ A    73                      .global BOOTLOAD_START, blskipskip, xfr08, par08_1, endboot
+ A    74                      .ref    RXDSP_START
+ A    75 000180               .sect   ".bl549"
+ A    76        1043! entry_point             .set    RXDSP_START
+ A    77        8000  eprom_base              .set    0x8000
+ A    78        0180+ bl_loadpoint    .set    BOOTLOAD_START
+ A    79              
+ A    80 000180       BOOTLOAD_START
+ A    81 000180       par08
+ A    82 000180 7728          stm             #0x7FFF,swwsr           ; set full wait states
+         000181 7FFF 
+ A    83 000182 7729          stm             #0x0002,bscr            ; bus holder enabled
+         000183 0002 
+ A    84 000184 EA00          ld              #0, DP
+ A    85 000185 F495          nop
+ A    86 000186 F495          nop
+ A    87                      
+ A    88 000187 7662          st              #entry_point, @entry
+         000188 1043!
+ A    89                      
+ A    90 000189 7711          stm     #eprom_base, AR1
+         00018a 8000 
+ A    91                      
+ A    92 00018b       par08_1                         ; Main section load loop
+ A    93              
+ A    94 00018b F495          nop
+ A    95 00018c 6F91          ld      *ar1+, 8, a                     ; get address of destination
+         00018d 0C48 
+ A    96              ************* Bug fix ****************************************************** 
+ A    97 00018e F030          and     #0ff00h,a       ;force AG, AH to zero for correct calculation
+         00018f FF00 
+ A    98                                                      ;of the 23–bit destination address. (10/14/99 BCT)
+ A    99              ****************************************************************************
+ A   100 000190 7191          mvdk    *ar1+, ar3              ; ar3   <-- junkbyte.low byte
+         000191 0013 
+ A   101 000192 6813          andm    #0ffh, @ar3     ; ar3   <-- low byte
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+bl549.abs                                                            PAGE    3
+
+         000193 00FF 
+ A   102 000194 1A13          or              @ar3, a                 ; acc A <-- high byte.low byte
+ A   103 000195 8812          stlm    a,ar2                   ; ar2   <-- destination address
+ A   104                      
+ A   105 000196 F845          bc      endboot,aeq             ; section dest = 0 indicates boot end
+         000197 01C7+
+ A   106                      
+ A   107 000198 6F91          ld      *ar1+, 8, a             ; get number of 16-bit words
+         000199 0C48 
+ A   108 00019a F030          and     #0xFF00,a                       ; Clear the guard bits and keep low accum (1.92)
+         00019b FF00 
+ A   109 00019c 7191          mvdk    *ar1+, ar3              ; ar3   <-- junkbyte.low byte
+         00019d 0013 
+ A   110 00019e 6813          andm    #0ffh, @ar3     ; ar3   <-- low byte
+         00019f 00FF 
+ A   111 0001a0 1A13          or      @ar3, a                         ; acc A <-- high byte.low byte
+ A   112                      
+ A   113 0001a1 6012          cmpm    AR2, #bl_loadpoint      ; check if our dest is the bootloader load address
+         0001a2 0180+
+ A   114 0001a3 F820          bc      blskipskip, NTC                 ; if not, keep loading
+         0001a4 01B0+
+ A   115                      
+ A   116 0001a5 F000          add             #1, A           ; if it is the bootloader, we want to skip 
+         0001a6 0001 
+ A   117 0001a7 8810          stlm    A, AR0          ; this section, i.e. skip A+1 words
+ A   118 0001a8 F495          nop
+ A   119 0001a9 0010          add             AR0, A          ; but wait,
+ A   120 0001aa 8810          stlm    A, AR0          ; A+1 words = 2(A+1) addresses (8-bit prom)
+ A   121 0001ab F495          nop
+ A   122 0001ac F273          bd              par08_1         
+         0001ad 018B+
+ A   123 0001ae 6DB1          mar     *AR1+0
+ A   124 0001af F495          nop
+ A   125                      
+ A   126 0001b0       blskipskip:
+ A   127              
+ A   128 0001b0 881A          stlm    a, brc                  ; update block repeat counter register
+ A   129 0001b1 F495          nop     
+ A   130 0001b2 F072          rptb    xfr08 - 1       ; block repeat to load section data
+         0001b3 01C4+
+ A   131                      
+ A   132                      ; load program code word
+ A   133 0001b4 6F91          ld      *ar1+, 8, a             ; acc A <-- high byte
+         0001b5 0C48 
+ A   134 0001b6 F030          and #0xFF00, a
+         0001b7 FF00 
+ A   135 0001b8 7191          mvdk    *ar1+, ar3              ; ar3   <-- junkbyte.low byte
+         0001b9 0013 
+ A   136 0001ba 6813          andm    #0ffh, @ar3     ; ar3   <-- low byte
+         0001bb 00FF 
+ A   137 0001bc 1A13          or      @ar3, a                         ; acc A <-- high byte.low byte
+ A   138 0001bd 8064          stl     a, @p8word
+ A   139                      
+ A   140                      ; recover destination address, pause, then write and increment
+ A   141 0001be 1212          ldu     @ar2, a
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+bl549.abs                                                            PAGE    4
+
+ A   142 0001bf F495          nop
+ A   143 0001c0 F495          nop     
+ A   144 0001c1 7F64          writa   @p8word
+ A   145 0001c2 F000          add             #1, a
+         0001c3 0001 
+ A   146 0001c4 8812          stlm    a, ar2
+ A   147              
+ A   148 0001c5       xfr08:                          ; end block repeat
+ A   149              
+ A   150 0001c5 F073          b               par08_1 ; end section loop
+         0001c6 018B+
+ A   151                      
+ A   152              **
+ A   153              *       End 549 8-bit EPROM bootloader
+ A   154              **
+ A   155              
+ A   156 0001c7       endboot
+ A   157 0001c7 1262          ldu     @entry, a               ; branch to the entry point
+ A   158 0001c8 F495          nop
+ A   159 0001c9 F495          nop
+ A   160 0001ca F6E2          baccd a
+ A   161 0001cb F495          nop
+ A   162 0001cc F495          nop
+
+No Assembly Errors, No Assembly Warnings
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+bl549.abs                                                            PAGE    5
+
+LABEL                                VALUE       DEFN    REF
+
+.TMS320C540                         000000          0 
+.TMS320C541                         000000          0 
+.TMS320C541A                        000000          0 
+.TMS320C542                         000001          0 
+.TMS320C543                         000000          0 
+.TMS320C544                         000000          0 
+.TMS320C545                         000000          0 
+.TMS320C545LP                       000000          0 
+.TMS320C546                         000000          0 
+.TMS320C546LP                       000000          0 
+.TMS320C548                         000000          0 
+.TMS320C549                         000000          0 
+.mnolist                            000000'     A  38 
+AG                                  00000a      A  62 
+AH                                  000009      A  61 
+AL                                  000008      A  60 
+BOOTLOAD_START                      000180+     A  80  A  73  A  78 
+RXDSP_START                            REF             A  74  A  76 
+__TI_ASSEMBLER_VERSION__            3d10d0          0 
+__far_mode                          000000          0 
+__lflags                            000000          0 
+__no_fret                           000000          0 
+__stores_bug                        000000          0 
+bl_loadpoint                        000180+     A  78  A 113 
+blskipskip                          0001b0+     A 126  A  73  A 114 
+brc                                 00001a      A  63  A 128 
+brs                                 000060      A  41 
+bscr                                000029      A  66  A  83 
+dest                                000066      A  47 
+endboot                             0001c7+     A 156  A  73  A 105 
+entry                               000062      A  43  A  88  A 157 
+entry_point                         001043      A  76  A  88 
+eprom_base                          008000      A  77  A  90 
+hbyte                               000063      A  44 
+ifr                                 000001      A  57 
+lngth                               000067      A  48 
+nmintv                              00006c      A  53 
+p8word                              000064      A  45  A 138  A 144 
+par08                               000180+     A  81 
+par08_1                             00018b+     A  92  A  73  A 122  A 150 
+pmst                                00001d      A  64 
+sp_ifr                              00006d      A  54 
+src                                 000065      A  46 
+st0                                 000006      A  58 
+st1                                 000007      A  59 
+swwsr                               000028      A  65  A  82 
+temp0                               000068      A  49 
+temp1                               000069      A  50 
+temp2                               00006a      A  51 
+temp3                               00006b      A  52 
+xentry                              000061      A  42 
+xfr08                               0001c5+     A 148  A  73  A 130 

@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<drivers id="TMS320C54XX">
+	<isa Type="TMS320C5400" ProcID="0x50015000">
+		<driver file="../../../emulation/drivers/sdgo54xusb.dvr">
+			<connectionType Type="SD510USB"/>
+		</driver>
+	</isa>
+</drivers>

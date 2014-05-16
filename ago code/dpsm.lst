@@ -1,0 +1,120 @@
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+dpsm.abs                                                             PAGE    1
+
+      69 000000                 .text
+      70                        .copy       "dpsm.asm"
+ A     1              ****
+ A     2              * Double-precision square magnitude function by Micah P. Dombrowski
+ A     3              * 
+ A     4              * Reads n Q.31 numbers arrayed as R[0], I[0], R[1], I[1], ..., R[n-1], I[n-1]
+ A     5              * outputs MSB half of R[0]^2+I[0]^2, R[1]^2+I[1]^2, ..., R[n-1]^2+I[n-1]^2
+ A     6              * output fills first half of input region
+ A     7              ****
+ A     8              
+ A     9              * Inputs: data address in A, number of R/I pairs in B
+ A    10              
+ A    11              * History
+ A    12              * 
+ A    13              * v1.0  12 June 2012    Extracted to separate asm file, set up as a CALLable function.
+ A    14              *
+ A    15              
+ A    16                      .mmregs
+ A    17                      .def    _sqmag
+ A    18 001a84               .sect   .dpsm_p
+ A    19 001a84       _sqmag
+ A    20              
+ A    21 001a84 4A06          pshm    ST0
+ A    22 001a85 4A07          pshm    ST1
+ A    23 001a86 F7B8          ssbx    SXM
+ A    24 001a87 F7B6          ssbx    FRCT
+ A    25 001a88 F7B9          ssbx    OVM
+ A    26 001a89 F6B7          rsbx    C16
+ A    27 001a8a F495          nop
+ A    28 001a8b F495          nop
+ A    29                      
+ A    30              ; Double-precision square magnitude, saving MSB half of result.
+ A    31              
+ A    32 001a8c 770E          stm             #0, T   ; Multiplication Temp register (for mpy)
+         001a8d 0000 
+ A    33 001a8e 7719          stm             #0, BK  ; Circuluar addressing modulus (do not want)
+         001a8f 0000 
+ A    34 001a90 F310          sub             #1, B
+         001a91 0001 
+ A    35 001a92 891A          stlm    B, BRC
+ A    36 001a93 7710          stm             #2, AR0         ; Increment (jump to next 32-bit datum)
+         001a94 0002 
+ A    37 001a95 8812          stlm    A, AR2          ; Load index
+ A    38 001a96 8813          stlm    A, AR3          ; Load index
+ A    39 001a97 8814          stlm    A, AR4          ; Storage index
+ A    40 001a98 F072          rptb    sqmag_loop - 1
+         001a99 1AAC+
+ A    41                      
+ A    42 001a9a 2092          mpy             *AR2+, A                        ; a = 0                         (1)
+ A    43 001a9b A649          macsu   *AR2-, *AR3+, A         ; a  = RL*RH            (1)
+ A    44 001a9c A650          macsu   *AR3-, *AR2, A          ; a += RH*RL            (1)
+ A    45 001a9d F450          ld              A, -16, A                       ; a >>= 16                      (1)
+ A    46 001a9e B0CD          mac             *AR2+0%, *AR3+0%, A     ; a += RH*RH            (1)
+ A    47 001a9f 770E          stm             #0, T           ; (2)
+         001aa0 0000 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+dpsm.abs                                                             PAGE    2
+
+ A    48 001aa1 F483      sat         A           ; (1)
+ A    49                      
+ A    50 001aa2 2192          mpy             *AR2+, B                        ; b = 0                         (1)
+ A    51 001aa3 A749          macsu   *AR2-, *AR3+, B         ; b  = IL*IH            (1)
+ A    52 001aa4 A750          macsu   *AR3-, *AR2, B          ; b += IH*IL            (1)
+ A    53 001aa5 F750          ld              B, -16, B                       ; b >>= 16                      (1)
+ A    54 001aa6 B3CD          mac             *AR2+0%, *AR3+0%, B     ; b += IH*IH            (1)
+ A    55 001aa7 770E          stm             #0, T           ; (2)
+         001aa8 0000 
+ A    56 001aa9 F583      sat         B           ; (1)
+ A    57              
+ A    58                  
+ A    59 001aaa F600      add         B, A            ; a += b == R^2 + I^2
+ A    60 001aab F483      sat         A
+ A    61 001aac 4E94          dst             A, *AR4+        ; (1)
+ A    62                      
+ A    63 001aad       sqmag_loop:
+ A    64              
+ A    65 001aad 8A07          popm    ST1
+ A    66 001aae 8A06          popm    ST0
+ A    67              
+ A    68 001aaf F495          nop
+ A    69 001ab0 F495          nop
+ A    70                              
+ A    71 001ab1 FE00          retd
+ A    72 001ab2 F495          nop
+ A    73 001ab3 F495          nop
+
+No Assembly Errors, No Assembly Warnings
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+dpsm.abs                                                             PAGE    3
+
+LABEL                                VALUE       DEFN    REF
+
+.TMS320C540                         000000          0 
+.TMS320C541                         000000          0 
+.TMS320C541A                        000000          0 
+.TMS320C542                         000001          0 
+.TMS320C543                         000000          0 
+.TMS320C544                         000000          0 
+.TMS320C545                         000000          0 
+.TMS320C545LP                       000000          0 
+.TMS320C546                         000000          0 
+.TMS320C546LP                       000000          0 
+.TMS320C548                         000000          0 
+.TMS320C549                         000000          0 
+__TI_ASSEMBLER_VERSION__            3d10d0          0 
+__far_mode                          000000          0 
+__lflags                            000000          0 
+__no_fret                           000000          0 
+__stores_bug                        000000          0 
+_sqmag                              001a84+     A  19  A  17 
+sqmag_loop                          001aad+     A  63  A  40 

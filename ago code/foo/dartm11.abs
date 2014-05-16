@@ -1,0 +1,17 @@
+          .nolist
+.text     .setsym     0000080h
+___text__  .setsym     0000080h
+etext     .setsym     0000c8ch
+___etext__  .setsym     0000c8ch
+.data     .setsym     0000080h
+___data__  .setsym     0000080h
+edata     .setsym     0000080h
+___edata__  .setsym     0000080h
+.bss      .setsym     0000080h
+___bss__  .setsym     0000080h
+end       .setsym     0000080h
+___end__  .setsym     0000080h
+          .setsect    ".text",0000080h
+          .list
+          .text
+          .copy       "dartm11.asm"

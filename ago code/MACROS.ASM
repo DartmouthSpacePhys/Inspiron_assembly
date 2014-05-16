@@ -1,0 +1,436 @@
+;***********************************************************
+; Version 2.20.01                                           
+;***********************************************************
+;*****************************************************************************
+;  Filename:	 macros.asm
+;  Description:  collections of macros for cfft
+;-----------------------------------------------------------------------------
+;  Description: Contains the following macros
+;-----------------------------------------------------------------------------
+; Revision History:
+;
+; 0.00	M. Christ/M. Chishtie. Original code
+; 1.00 R./ Piedra, 8/31/98
+;		   - Modifed stage3 macro to correct functional problem
+;		   - Modified order of xmem, ymem operands in butterfly code
+;		     to reduce number of cycles from 10 to 8
+; 1.00 A. Aboagye, 10/14/98
+;		   - Introduced scaling option ... *sp(scale) = 0 => no scaling
+;						   *sp(scale) != 0 => scaling
+;
+;*****************************************************************************
+
+	.mmregs
+;****************************************************************************
+; macro : combo5xx
+;
+; COMBO5xx macro implements a bit reversal stage and the first two FFT
+; stages (radix-4 implementation). Bit reversal is now done in the same loop
+; thereby saving cycles. Circular addressing is used to access INPUT buffer and
+; bit-reversed addressing is used to implement the DATA buffer. Therefore INPUT
+; buffer must now be aligned at 4*N and DATA buffer at 2*N boundary. (MCHI)
+;---------------------------------------------------------------------------
+combo5xx .macro                     ; REPEAT MACRO 'combo5xx': N/4 times
+;	 .global STAGE1,COMBO1,COMBO2,end1,end2,end?
+
+*                                                                         *
+* R1  := [(R1+R2)+(R3+R4)]/4    INPUT               OUTPUT                *
+* R2  := [(R1-R2)+(I3-I4)]/4    ------------------  ------------------    *
+* R3  := [(R1+R2)-(R3+R4)]/4    AR0 =  7                                  *
+* R4  := [(R1-R2)-(I3-I4)]/4    AR1 -> R1,I1        AR1 - > R5,I5         *
+* I1  := [(I1+I2)+(I3+I4)]/4    AR2 -> R2,I2        AR2 - > R6,I6         *
+* I2  := [(I1-I2)-(R3-R4)]/4    ARP-> AR3 -> R3,I3  ARP - > AR3 - > R7,I7 *
+* I3  := [(I1+I2)-(I3+I4)]/4    AR4 -> R4,I4        AR4 - > R8,I8         *
+* I4  := [(I1-I2)+(R3-R4)]/4                                              *
+*                                                                         *
+
+
+;
+STAGE1:
+	mvdk	*sp(DATA),ar2	; (RMP) pointer to DATA   r1,i1
+	mvdk	*sp(DATA),ar3
+
+	mvmm	ar3,ar4
+	mvmm	ar3,ar5
+
+	mar	*+ar3(2)	 ; pointer to DATA + 2	 r2,i2
+	mar	*+ar4(4)	 ; pointer to DATA + 4	 r3,i3
+	mar	*+ar5(6)	 ; pointer to DATA + 6	 r4,i4
+
+	ld	*sp(scale), a
+	bcd	COMBO2, AEQ
+	ld      #0,ASM           ; ASM=0
+	nop
+
+	ld	#-2, ASM
+        .if     FFT_N>4
+        stm     #7,ar0        ; index
+        stm     #0,BK         ; blocksize to zero!
+        stm     #FFT_N/4-1,BRC    ; execute N/4-1 times 'combo5xx'
+	rptb	end1	      ;
+        .endif
+;							   AR2 AR3 AR4 AR5
+;                             ;                            --- --- --- ---
+COMBO1  sub     *ar2,*ar3,B   ; B  := (R1-R2)              R1  R2  R3  R4
+        add     *ar2,*ar3,A   ; A  := (R1+R2)              R1  R2  R3  R4
+        sth     B,ASM,*ar3    ; R2':= (R1-R2)/4            R1  R2  R3  R4
+        add     *ar4,*ar5,B   ; B  := (R3+R4)              R1  R2  R3  R4
+        add     B,A           ; A  := (R1+R2) + (R3+R4)    R1  R2  R3  R4
+        sth     A,ASM,*ar2+   ; R1':=((R1+R2) + (R3+R4))/4 I1  R2  R3  R4
+        sub     B,1,A         ; B  :=((R1+R2) - (R3+R4))   I1  R2  R3  R4
+        sub    *ar4,*ar5,B    ; B  := (R3-R4)              I1  R2  R3  R4
+        st      A,*ar4+ ;ASM  ; R3':=((R1+R2) - (R3+R4))/4 I1  R2  I3  R4
+   ||   ld      *ar3,A ; 16   ; A  := (R1-R2)/4            I1  R2  I3  R4
+        sth     B,ASM,*ar5+   ; R4':= (R3-R4)/4            I1  R2  I3  I4
+        sub    *ar4,*ar5-,B   ; B  := (I3-I4)              I1  R2  I3  R4
+        add     B,ASM,A       ; A  := (R1-R2) + (I3 -I4)/4 I1  R2  I3  R4
+        sth     A,*ar3+       ; R2':= (R1-R2) + (I3 -I4)/4 I1  I2  I3  R4
+        sub     B,-1,A        ; A  :=((R1-R2) - (I3-I4))   I1  I2  I3  R4
+        ld      *ar5,16,B     ; B=R3-R4
+        sth     A,*ar5+       ; R4':=((R1-R2) - (I3-I4))/4 I1  I2  I3  I4
+        add     *ar4,*ar5,A   ; A  := (I3+I4)              I1  I2  I3  I4
+        sth     A,ASM,*ar4    ; I3':= (I3+I4)/4            I1  I2  I3  I4
+        sub     *ar2,*ar3,A   ; A  := (I1-I2)              I1  I2  I3  I4
+        add     B,2,A         ; A  := (I1-I2)+ (r3-r4)     I1  I2  I3  I4
+        sth     A,ASM,*ar5+0  ; I4':= (I1-I2)+ (r3-r4)/4   I1  I2  I3  R4'
+        sub     B,3,A         ; A  := (I1-I2)- (r3-r4)     I1  I2  I3  R4'
+        add     *ar2,*ar3,B   ; B  := (I1+I2)              I1  I2  I3  R4'
+        st      A,*ar3+0% ;asm; I2':= (I1-I2)-(R3-R4)/4    I1  R2' I3  R4'
+   ||   ld      *ar4,A    ;16 ; A  := (I3+I4)/4            I1  R2' I3  R4'
+        add     A,2,B         ; B  := (I1+I2)+(I3+I4)      I1  R2' I3  R4'
+        sth     B,ASM,*ar2+0  ; I1':= (I1+I2)+(I3+I4)/4    R1' R2' I3  R4'
+        sub     A,3,B         ; B  := (I1+I2)-(I3+I4)/4    R1' R2' I3  R4'
+end1    sth     B,ASM,*ar4+0  ; I3':= (I1+I2)-(I3+I4)/4    R1' R2' R3' R4'
+	b	end?
+
+
+COMBO2
+        .if     FFT_N>4
+        stm     #7,ar0        ; index
+        stm     #0,BK         ; blocksize to zero!
+        stm     #FFT_N/4-1,BRC    ; execute N/4-1 times 'combo5xx'
+	rptb	end2	      ;
+        .endif
+;							   AR2 AR3 AR4 AR5
+;                             ;                            --- --- --- ---
+	sub     *ar2,*ar3,B   ; B  := (R1-R2)              R1  R2  R3  R4
+        add     *ar2,*ar3,A   ; A  := (R1+R2)              R1  R2  R3  R4
+        sth     B,ASM,*ar3    ; R2':= (R1-R2)              R1  R2  R3  R4
+        add     *ar4,*ar5,B   ; B  := (R3+R4)              R1  R2  R3  R4
+        add     B,A           ; A  := (R1+R2) + (R3+R4)    R1  R2  R3  R4
+        sth     A,ASM,*ar2+   ; R1':= (R1+R2) + (R3+R4)    I1  R2  R3  R4
+        sub     B,1,A         ; A  := (R1+R2) - (R3+R4)    I1  R2  R3  R4
+        sub    *ar4,*ar5,B    ; B  := (R3-R4)              I1  R2  R3  R4
+        st      A,*ar4+ ;ASM  ; R3':= (R1+R2) - (R3+R4)    I1  R2  I3  R4
+   ||   ld      *ar3,A ; 16   ; A  := (R1-R2)              I1  R2  I3  R4
+        sth     B,ASM,*ar5+   ; R4':= (R3-R4)              I1  R2  I3  I4
+        sub    *ar4,*ar5-,B   ; B  := (I3-I4)              I1  R2  I3  R4
+        add     B,ASM,A       ; A  := (R1-R2) + (I3-I4)    I1  R2  I3  R4
+        sth     A,*ar3+       ; R2':= (R1-R2) + (I3-I4)    I1  I2  I3  R4
+        sub     B,1,A         ; A  := (R1-R2) - (I3-I4)    I1  I2  I3  R4
+        ld      *ar5,16,B     ; B=R3-R4
+        sth     A,*ar5+       ; R4':= (R1-R2) - (I3-I4)    I1  I2  I3  I4
+        add     *ar4,*ar5,A   ; A  := (I3+I4)              I1  I2  I3  I4
+        sth     A,ASM,*ar4    ; I3':= (I3+I4)              I1  I2  I3  I4
+        sub     *ar2,*ar3,A   ; A  := (I1-I2)              I1  I2  I3  I4
+        add     B,A           ; A  := (I1-I2)+ (r3-r4)     I1  I2  I3  I4
+        sth     A,ASM,*ar5+0  ; I4':= (I1-I2)+ (r3-r4)     I1  I2  I3  R4'
+        sub     B,1,A         ; A  := (I1-I2)- (r3-r4)     I1  I2  I3  R4'
+        add     *ar2,*ar3,B   ; B  := (I1+I2)              I1  I2  I3  R4'
+        st      A,*ar3+0% ;asm; I2':= (I1-I2)-(R3-R4)      I1  R2' I3  R4'
+   ||   ld      *ar4,A    ;16 ; A  := (I3+I4)              I1  R2' I3  R4'
+        add     A,B           ; B  := (I1+I2)+(I3+I4)      I1  R2' I3  R4'
+        sth     B,ASM,*ar2+0  ; I1':= (I1+I2)+(I3+I4)      R1' R2' I3  R4'
+        sub     A,1,B         ; B  := (I1+I2)-(I3+I4)      R1' R2' I3  R4'
+end2    sth     B,ASM,*ar4+0  ; I3':= (I1+I2)-(I3+I4)      R1' R2' R3' R4'
+end?	.endm
+;*****************************************************************************
+; macro: stage3
+;
+; STAGE3 macro is improved such that it now takes only 31 cycles per iteration.
+; It uses two additional auxiliary registers(AR1,AR4) to support indexing.(MCHI)
+;------------------------------------------------------------------------------
+
+stage3      .macro
+
+        .global STAGE3 ,MCR3 ;,end?
+		.global	st3_p2, st3_p3, st3_p4, st3_p5, st3_end
+        
+        .asg    AR2,P
+        .asg    AR3,Q
+        
+STAGE3:
+	ld	*sp(DATA),a	; a = DATA
+	stlm	a, P		; pointer to DATA	pr,pi
+	add	#8,a		; a = DATA + #8
+	stlm	a, Q		; pointer to DATA + 8	qr,qi
+
+
+	ld	*sp(scale),a
+
+        STM     #9,AR1      
+        STM     #2,AR4
+	xc	1,ANEQ
+	ld	#-1,ASM
+
+        .if     FFT_N>8
+        STM     #FFT_N/8-1,BRC  ; execute N/8-1 times '4 macros'
+        RPTBD   end?        ;
+        .endif              ;
+	LD	*sp(SIN45),T	; load to sin(45)
+	nop
+***************************************************************************
+*                                                                         *
+*     MACRO requires   number of words/number of cycles: 6.5              *
+*                                                                         *
+*        PR'=(PR+QR)/2      PI'=(PI+QI)/2                                 *
+*        QR'=(PR-QR)/2      QI'=(PI-QI)/2                                 *
+*                                                                         *
+*  version 0.99    from Manfred Christ     update:  2. May. 94            *
+***************************************************************************
+st3_p2:
+;                                         (contents of register after exec.)
+;                                                         AR2  AR3
+;                                                         ---  ---
+MCR3  LD    *P,16,A         ; A :=       PR                PR   QR
+      SUB   *Q,16,A,B       ; B :        PR-QR             PR   QR
+      ST    B,*Q            ; QR:= (1/2)(PR-QR)
+||    ADD   *Q+,B           ; B :=      (PR+QR)            PR   QI
+      ST    B,*P+           ; PR:= (1/2)(PR+QR)
+||    LD    *Q,A            ; A :=          QI             PI   QI
+      ST    A,*Q            ; Dummy write
+||    SUB   *P,B            ; B :=      (PI-QI)            PI   QI
+      ST    B,*Q+           ; QI:= (1/2)(PI-QI)            PI   QR+1
+||    ADD   *P,B            ; B :=      (PI+QI)
+      ST    B,*P+           ; PI:= (1/2)(PI+QI)            PR+1 QR+1
+      
+    
+***************************************************************************
+*                                                                         *
+*     MACRO requires   number of words/number of cycles: 9                *
+*                                                                         *
+*  T=SIN(45)=COS(45)=W45                                                  *
+*                                                                         *
+*                                                                         *
+*        PR'= PR + (W*QI + W*QR) = PR + W * QI + W * QR    (<- AR2)       *
+*        QR'= PR - (W*QI + W*QR) = PR - W * QI - W * QR    (<- AR3)       *
+*        PI'= PI + (W*QI - W*QR) = PI + W * QI - W * QR    (<- AR2+1)     *
+*        QI'= PI - (W*QI - W*QR) = PI - W * QI + W * QR    (<- AR3+2)     *
+*                                                                         *
+*        PR'= PR +  W * (QI + QR)    (<- AR2)                             *
+*        QR'= PR -  W * (QI + QR)    (<- AR3)                             *
+*        PI'= PI +  W * (QI - QR)    (<- AR2+1)                           *
+*        QI'= PI -  W * (QI - QR)    (<- AR3+1)                           *
+*                                                                         *
+*  version 0.99    from Manfred Christ     update: 2. May. 94             *
+*                                                                         *
+***************************************************************************
+||    MPY   *Q+,A         ;A   =  QR*W                    PR   QI
+st3_p3:
+      MVMM  AR4,AR0       ;Index = 2
+      MAC   *Q-,A         ;A  :=     (QR*W +QI*W)         PR   QR
+      ADD   *P,16,A,B     ;B  := (PR+(QR*W +QI*W ))       PR   QR
+      ST    B,*P    ;<<ASM;PR':= (PR+(QR*W +QI*W ))/2     PI   QR
+||    SUB   *P+,B         ;B  := (PR-(QR*W +QI*W ))       PI   QR
+      ST    B,*Q    ;<<ASM;QR':= (PR-(QR*W +QI*W ))/2
+||    MPY   *Q+,A         ;A  :=      QR*W                PI   QI
+      MAS   *Q,A          ;A  := (   (QR*W -QI*W ))       PI   QI
+      ADD   *P,16,A,B     ;B  := (PI+(QR*W -QI*W ))       PI   QI
+      ST    B,*Q+0%       ;QI':= (PI+(QR*W -QI*W ))/2     PI   QI+1
+||    SUB   *P,B          ;B  := (PI-(QR*W -QI*W ))       PI   QI+1
+      ST    B,*P+         ;PI':= (PI-(QR*W -QI*W ))/2     PR+1 QI+1
+***************************************************************************
+*                                                                         *
+*     MACRO 'PBY2I'    number of words/number of cycles: 6                *
+*                                                                         *
+*        PR'=(PR+QI)/2      PI'=(PI-QR)/2                                 *
+*        QR'=(PR-QI)/2      QI'=(PI+QR)/2                                 *
+*                                                                         *
+*  version 0.99    from Manfred Christ     update:  2. May. 94            *
+*                                                                         *
+***************************************************************************
+;                                         (contents of register after exec.)
+;                                                     AR2      AR3
+;                                                     ---      ---
+||    LD    *Q-,A           ; A   :=     QI           PR       QR
+st3_p4:
+
+; rmp ADD   *P,A,B	    ; B   := (PR+QI)	      PR       QR
+; rmp: 8/31/98 corrected following ADD instruction
+      ADD   *P,16,A,B	    ; B   := (PR+QI)	      PR       QR
+      ST    B,*P            ; PR' := (PR+QI)/2
+||    SUB   *P+,B           ; B   := (PR-QI)          PI       QR
+      ST    B,*Q            ; QR' := (PR-QI)/2
+||    LD    *Q+,A           ; A   :=     QR           PI       QI
+
+; rmp ADD   *P,A,B	    ; B   := (PI+QR)	      PI       QI
+; rmp 8/31/98 corrected following ADD instruction
+      ADD   *P,16,A,B	    ; B   := (PI+QR)	      PI       QI
+      ST    B,*Q+           ; QI' := (PI+QR)/2        PI       QR+1
+||    SUB   *P,B            ; B   := (PI-QR)
+      ST    B,*P+           ; PI' := (PI-QR)/2        PR+1     QR+1
+
+
+***************************************************************************
+*                                                                         *
+*     MACRO requires   number of words/number of cycles: 9.5              *
+*                                                                         *
+*  version 0.99    from: Manfred Christ   update:  2. May. 94             *
+*                                                                         *
+*   ENTRANCE IN THE MACRO: AR2->PR,PI                                     *
+*                          AR3->QR,QI                                     *
+*                          TREG=W=COS(45)=SIN(45)                         *
+*                                                                         *
+*       EXIT OF THE MACRO: AR2->PR+1,PI+1                                 *
+*                          AR3->QR+1,QI+1                                 *
+*                                                                         *
+*        PR'= PR + (W*QI - W*QR) = PR + W * QI - W * QR    (<- AR1)       *
+*        QR'= PR - (W*QI - W*QR) = PR - W * QI + W * QR    (<- AR2)       *
+*        PI'= PI - (W*QI + W*QR) = PI - W * QI - W * QR    (<- AR1+1)     *
+*        QI'= PI + (W*QI + W*QR) = PI + W * QI + W * QR    (<- AR1+2)     *
+*                                                                         *
+*        PR'= PR + W*(QI - QR)  = PR - W *(QR -QI)   (<- AR2)             *
+*        QR'= PR - W*(QI - QR)  = PR - W *(QR -QI)   (<- AR3)             *
+*        PI'= PI - W*(QI + QR)     (<- AR2+1)                             *
+*        QI'= PI + W*(QI + QR)     (<- AR3+1)                             *
+*                                                                         *
+* BK==0 !!!!!                                                             *
+*                                                                         *
+***************************************************************************
+;                                                           AR2 AR3
+;                                                           --- ---
+||    MPY   *Q+,A          ;A  :=  QR*W                     PR  QI
+st3_p5:
+      MVMM  AR1,AR0        ;Index = 9
+      MAS   *Q-,A          ;A  := (QR*W -QI*W )             PR  QR
+      ADD   *P,16,A,B      ;B  := (PR+(QR*W -QI*W ))        PR  QR
+      ST    B,*Q+    ;<<ASM;QR':= (PR+(QR*W -QI*W ))/2      PR  QI
+||    SUB   *P,B           ;B  := (PR-(QR*W -QI*W ))     
+      ST    B,*P+    ;<<ASM;PR':= (PR-(QR*W -QI*W ))/2
+||    MAC   *Q,A           ;A  := QR*W                      PI  QI
+      MAC   *Q,A           ;A  := (   (QR*W +QI*W ))        PI  QI
+      ADD   *P,16,A,B      ;B  := (PI+(QR*W +QI*W ))        PI  QI
+      ST    B,*Q+0%   ;<ASM;QI':= (PI+(QR*W +QI*W ))/2      PI  QR+1
+||    SUB   *P,B           ;B  := (PI-(QR*W +QI*W ))        
+      STH   B,ASM,*P+0%    ;PI':= (PI-(QR*W +QI*W ))/2      PR+1QR+1
+end?  .set  $-1
+
+st3_end:
+      STM   #-2,AR0        ;Index used in stdmacro macro
+      .endm
+
+;****************************************************************************
+; macro : laststag
+;----------------------------------------------------------------------------
+
+laststag .macro  stage,sin,cos
+;         .global STAGE:stage:,end?
+STAGE:stage: .set $
+
+	ld	*sp(DATA),a
+	stlm	a, ar2		; ar2 -> DATA
+	add	#FFT_N,a
+	stlm	a, ar3		; ar3 -> DATA+(offset=N)
+      stm   #cos,ar4         ; start of cosine in stage 'stg'
+      stm   #sin,ar5         ; start of sine in stage   'stg'
+      buttfly FFT_N/2            ; execute N/2 butterflies
+      .endm
+
+;***************************************************************************
+; macro : stdmacro
+;---------------------------------------------------------------------------
+
+stdmacro .macro  stage,l1,l2,idx,sin,cos
+;         .global STAGE:stage:,end?
+STAGE:stage: .set $
+
+	ld	*sp(DATA),a
+	stlm	a,ar2		; ar2 -> DATA
+	add	#idx,a		; ar3 -> DATA+(offset=idx)
+	stlm	a,ar3
+
+      stm   #l1-1,ar1        ; outer loop counter
+      stm   #cos,ar6         ; start of cosine in stage 'stg'
+      stm   #sin,ar7         ; start of sine in stage 'stg'
+
+loop? mvmm  ar6,ar4          ; start of cosine in stage 'stg'
+      mvmm  ar7,ar5          ; start of sine in stage 'stg'
+
+      buttfly l2             ; execute l2 butterflies
+
+      mar   *+ar2(idx)
+      banzd loop?,*ar1-
+      mar   *+ar3(idx)
+      .endm
+
+;***************************************************************************
+; macro: buttfly
+;
+; Improved radix-2 butterfly code from 9 to 8 cycles per iteration. The new
+; butterfly uses AR0 for indexing and the loop is unrolled such that one butterfly
+; is implemented outside the loop.
+;---------------------------------------------------------------------------
+
+buttfly .macro num          ;             (contents of register after exec.)
+
+      .asg  AR2, P
+      .asg  AR3, Q
+      .asg  AR4,WR
+      .asg  AR5,WI
+      
+;X    STM  #-2,AR0          ; index = -2
+      STM  #:num:-3,BRC     ; execute startup + num-3 times general BUTTFLY
+;                                                         AR2  AR3  AR4  AR5
+; takes 17 words-/cycles (including RPTB)                 ---  ---  ---  ---
+      LD   *P,16,A        ;A  :=  PR                      PR   QR   WR   WI
+      SUB  *Q,16,A,B      ;B  :   PR-QR                   PR   QR   WR   WI
+      ST   B,*Q     ;<<ASM;QR':= (PR-QR)/2
+||    ADD  *Q+,B          ;B  := (PR+QR)                  PR   QI   WR   WI
+      ST   B,*P+    ;<<ASM;PR':= (PR+QR)/2
+||    LD   *Q,A     ;<<16 ;A  :=  QI                      PI   QI   WR   WI
+      ADD  *P,16,A,B      ;B  := (PI+QI)                  PI   QI   WR   WI
+      ST   B,*P     ;<<ASM;PI':= (PI+QI)/2
+||    SUB  *P+,B          ;B  := (PI-QI)                  PR+1 QR   WR   WI
+      STH   B,ASM,*Q+     ;QI':= (PI-QI)/2                PR+1 QR+1 WR   WI
+
+      MPY   *WR,*Q+,A     ;A  := QR*WR                    PR+1 QI+1 WR   WI
+      MAC   *WI+,*Q-,A    ;A  := (QR*WR+QI*WI) || T=WI    PR+1 QR+1 WR   WI+1
+      ADD   *P,16,A,B     ;B  := (PR+(QR*WR+QI*WI))       PR+1 QR+1 WR   WI+1
+      ST    B,*P    ;<<ASM;PR':= (PR+(QR*WR+QI*WI))/2     
+||    SUB   *P+,B         ;B  := (PR-(QR*WR+QI*WI))       PI+1 QR+1 WR   WI+1
+      ST    B,*Q    ;<<ASM;QR':= (PR-(QR*WR+QI*WI))/2
+||    MPY   *Q+,A         ;A  := QR*WI     [t=WI]         PI+1 QI+1 WR   WI+1
+      MAS   *WR+,*Q,A     ;A  := (   (QR*WI-QI*WR))       PI+1 QI+1 WR+1 WI+1
+
+
+      RPTBD end?-1        ;delayed block repeat
+      ST    A,*Q+         ;dummy write
+||    SUB   *P,B          ;B  := (PI-(QR*WI-QI*WR))       PI+1 QR+2 WR+1 WI+1
+      ST    B,*P    ;<<ASM;PI':= (PI-(QR*WI-QI*WR))/2
+||    ADD   *P+,B         ;B  := (PI+(QR*WI-QI*WR))       PR+2 QR+2 WR+1 WI+1
+;                                                             
+; Butterfly kernal with 8 instructions / 8 cycles
+;
+; rmp MPY   *WR,*Q+,A	  ;A  :=  QR*WR 		  PR+2 QI+2 WR+1 WI+1
+; rmp reversed order in following MPY instruction
+      MPY   *Q+,*WR,A	  ;A  :=  QR*WR 		  PR+2 QI+2 WR+1 WI+1
+      MAC   *WI+,*Q+0%,A  ;A  := (QR*WR+QI*WI) || T=WI    PR+2 QI+1 WR+1 WI+2
+      ST    B,*Q+   ;<<ASM;QI':= (PI+(QR*WI-QI*WR))/2
+||    ADD   *P,B          ;B  := (PR+(QR*WR+QI*WI))       PR+2 QR+2 WR+1 WI+2
+      ST    B,*P    ;<<ASM;PR':= (PR+(QR*WR+QI*WI))/2
+||    SUB   *P+,B         ;B  := (PR-(QR*WR+QI*WI))       PI+2 QR+2 WR+1 WI+2
+      ST    B,*Q    ;<<ASM;QR':= (PR-(QR*WR+QI*WI))/2
+||    MPY   *Q+,A         ;A  := QR*WI     [t=WI]         PI+2 QI+2 WR+1 WI+2
+; rmp MAS   *WR+,*Q,A	  ;A  := (   (QR*WI-QI*WR))	  PI+2 QI+2 WR+2 WI+2
+; rmp reversed order in following MPY instruction
+      MAS   *Q,*WR+,A	  ;A  := (   (QR*WI-QI*WR))	  PI+2 QI+2 WR+2 WI+2
+      ST    A,*Q+         ;dummy write
+||    SUB   *P,B          ;B  := (PI-(QR*WI-QI*WR))       PI+2 QR+3 WR+2 WI+2
+      ST    B,*P    ;<<ASM;PI':= (PI-(QR*WI-QI*WR))/2
+||    ADD   *P+,B         ;B  := (PI+(QR*WI-QI*WR))       PR+3 QR+3 WR+2 WI+2
+end?
+      MAR   *Q-
+      STH   B,ASM,*Q+     ;QI':= (PI+(QR*WI-QI*WR))/2     PR+3 QR+3 WR+2 WI+2
+      .endm
+
+;end of file. please do not remove. it is left here to ensure that no lines of code are removed by any editor

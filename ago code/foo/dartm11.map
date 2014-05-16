@@ -1,0 +1,85 @@
+******************************************************************************
+              TMS320C54x Linker PC v4.2.0                      
+******************************************************************************
+>> Linked Mon Oct 03 16:06:59 2011
+
+OUTPUT FILE NAME:   <dartm11.out>
+ENTRY POINT SYMBOL: 0
+
+
+MEMORY CONFIGURATION
+
+         name            origin    length      used     unused   attr    fill
+----------------------  --------  ---------  --------  --------  ----  --------
+PAGE 0:
+  PROG                  00000080   0000ff00  00000c0c  0000f2f4  RWIX
+
+PAGE 1:
+  DATA                  00000080   0000ff80  00000000  0000ff80  RW  
+
+
+SECTION ALLOCATION MAP
+
+ output                                  attributes/
+section   page    origin      length       input sections
+--------  ----  ----------  ----------   ----------------
+.data      0    00000080    00000000     UNINITIALIZED
+
+.text      0    00000080    00000c0c     
+                  00000080    00000c0c     dartm11.obj (.text)
+
+.bss       1    00000080    00000000     UNINITIALIZED
+
+
+GLOBAL SYMBOLS: SORTED ALPHABETICALLY BY Name 
+
+address    name
+--------   ----
+00000080   .bss
+00000080   .data
+00000080   .text
+ffffffff   ___binit__
+00000080   ___bss__
+ffffffff   ___c_args__
+ffffffff   ___cinit__
+00000080   ___data__
+00000080   ___edata__
+00000080   ___end__
+00000c8c   ___etext__
+ffffffff   ___pinit__
+00000080   ___text__
+00000000   __lflags
+ffffffff   binit
+ffffffff   cinit
+00000080   edata
+00000080   end
+00000c8c   etext
+ffffffff   pinit
+
+
+GLOBAL SYMBOLS: SORTED BY Symbol Address 
+
+address    name
+--------   ----
+00000000   __lflags
+00000080   .bss
+00000080   .data
+00000080   .text
+00000080   ___bss__
+00000080   ___data__
+00000080   ___edata__
+00000080   ___end__
+00000080   ___text__
+00000080   edata
+00000080   end
+00000c8c   ___etext__
+00000c8c   etext
+ffffffff   ___binit__
+ffffffff   ___c_args__
+ffffffff   ___cinit__
+ffffffff   ___pinit__
+ffffffff   binit
+ffffffff   cinit
+ffffffff   pinit
+
+[20 symbols]

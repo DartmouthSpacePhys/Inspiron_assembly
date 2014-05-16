@@ -1,0 +1,48 @@
+;
+;	Interrupt Vectors, RAM Page 1
+;
+	.sect 	".vectors"
+		
+START:	b	ago_main		; Reset/SINTR 0
+		nop
+		nop
+;
+		b	ago_main		; NMI/SINT16 1
+		nop
+		nop
+;	software interrupts
+		.space	4*16		; SINT17 2
+		.space	4*16		; SINT18 3
+		.space	4*16		; SINT19 4
+		.space	4*16		; SINT20 5
+		.space	4*16		; SINT21 6
+		.space	4*16		; SINT22 7
+		.space	4*16		; SINT23 8
+		.space	4*16		; SINT24 9
+		.space	4*16		; SINT25 10
+		.space	4*16		; SINT26 11
+		.space	4*16		; SINT27 12
+		.space	4*16		; SINT28 13
+		.space	4*16		; SINT29 14
+		.space	4*16		; SINT30 15
+; hardware ints
+		.space	4*16		; INT0/SINT0 16
+		.space	4*16		; INT1/SINT1 17
+		.space	4*16		; INT2/SINT2 18
+; timer int
+	reted					; TINT/SINT3 19 (just returns)				
+	portw	0, wr_dog		; Strobe the watchdog
+	nop
+; serial interrupts
+		.space	4*16		; BRINT0/SINT4 20
+		.space	4*16		; BXINT0/SINT5 21
+		.space	4*16		; TRINT0/SINT6 22
+		.space	4*16		; TXINT0/SINT7 23
+; aux and HPI ints
+		.space	4*16
+;		b	inth_3			; INT3/SINT8 24
+;		nop
+;		nop
+		.space	4*16		; HPINT/SINT9 25
+		
+; finished

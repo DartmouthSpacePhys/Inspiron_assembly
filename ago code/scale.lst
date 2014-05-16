@@ -1,0 +1,331 @@
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+scale.abs                                                            PAGE    1
+
+      69 000000                 .text
+      70                        .copy       "scale.asm"
+ A     1              * * * *
+ A     2              * Prescaling functions by Micah P. Dombrowski
+ A     3              * 
+ A     4              * _sqmag_prescale
+ A     5              *
+ A     6              *       Used on 32-bit complex number array (stored RIRIRI), finds the largest possible shift 
+ A     7              *       applicable to each RI pair using EXP.  Assumes a zero return equates to EXP(0), and 
+ A     8              *       stores the maximum shift.  Stores 2*shift in scale factor array.
+ A     9              *
+ A    10              * _log_prescale
+ A    11              *
+ A    12              *       For TI DSP Library Logarithm: normalizes each 32-bit value using EXP and NORM, adding 
+ A    13              *       shift values to existing values in the save array, and cutting to 16-bit output
+ A    14              *
+ A    15              * _descale
+ A    16              * 
+ A    17              *       Adjusts logarithmic output based on scale factor array, by subtracting scale*log10(2).
+ A    18              *
+ A    19              * * * *
+ A    20              
+ A    21                      .mmregs
+ A    22              
+ A    23              ; Stack usage
+ A    24                              ; 0 = ST1, 1 = ST0, 2 = function return pointer
+ A    25                      .asg    *SP(3), idata
+ A    26                      .asg    *SP(4), odata
+ A    27                      .asg    *SP(5), sdata
+ A    28                      
+ A    29                      .def    _sqmag_prescale, _log_prescale, _descale
+ A    30 00199f               .sect   .scale_p
+ A    31              
+ A    32              ***
+ A    33              * _sqmag_prescale
+ A    34              *
+ A    35              * Inputs:       N, number of values to scale in Acc,
+ A    36              *       ToS:            data input address (512x2 words present), 
+ A    37              *                               data output address (512 words free),
+ A    38              *                               scale save address (512 words free)
+ A    39              
+ A    40              * History
+ A    41              * 
+ A    42              * v1.0  13 June 2012    Created.
+ A    43              * v1.1  14 June 2012    Discovered a CMP? then XC chain needs two NOPs in between.  Wat.
+ A    44              *                                               Moved to single scale code file.
+ A    45              
+ A    46 00199f       _sqmag_prescale
+ A    47              
+ A    48              ; Set up processor for signed, non-fractional math
+ A    49 00199f 4A06          pshm    ST0
+ A    50 0019a0 4A07          pshm    ST1
+ A    51 0019a1 F7BE          ssbx    CPL
+ A    52 0019a2 F6B6          rsbx    FRCT
+ A    53 0019a3 F7B8          ssbx    SXM
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+scale.abs                                                            PAGE    2
+
+ A    54 0019a4 F7B9          ssbx    OVM
+ A    55 0019a5 F6B7          rsbx    C16
+ A    56 0019a6 F495          nop
+ A    57 0019a7 F495          nop
+ A    58                      
+ A    59 0019a8 F010          sub     #1, A   ; BRC = N-1
+         0019a9 0001 
+ A    60 0019aa 881A          stlm    A, BRC
+ A    61 0019ab 7710          stm             #16, AR0        ; max shift value
+         0019ac 0010 
+ A    62 0019ad 7103          mvdk    idata, AR2      ; input pointer
+         0019ae 0012 
+ A    63 0019af 7104          mvdk    odata, AR3      ; output pointer
+         0019b0 0013 
+ A    64 0019b1 7105          mvdk    sdata, AR4      ; scale array pointer
+         0019b2 0014 
+ A    65                      
+ A    66 0019b3 F072          rptb    sqmag_prescale_loop - 1
+         0019b4 19D2+
+ A    67                      
+ A    68 0019b5 5692          dld             *AR2+, A
+ A    69 0019b6 578A          dld             *AR2-, B
+ A    70 0019b7 F495          nop
+ A    71 0019b8 F495          nop
+ A    72              
+ A    73 0019b9 F48E          exp             A
+ A    74 0019ba F495          nop
+ A    75 0019bb 480E          ldm             T, A
+ A    76                      
+ A    77 0019bc F58E          exp             B
+ A    78 0019bd F495          nop
+ A    79 0019be 490E          ldm             T, B
+ A    80                      
+ A    81 0019bf F487          min             A               ; A = min(A,B)
+ A    82 0019c0 F495          nop
+ A    83 0019c1 F495          nop
+ A    84              
+ A    85 0019c2 F010          sub             #4, A   ; 4 guard bits
+         0019c3 0004 
+ A    86                      
+ A    87                      
+ A    88 0019c4 880E          stlm    A, T    ; re-store to T
+ A    89 0019c5 F495          nop
+ A    90 0019c6 F495          nop
+ A    91                      
+ A    92 0019c7 4A0E          pshm    T       ; save T to stack
+ A    93              
+ A    94 0019c8 5692          dld             *AR2+, A
+ A    95 0019c9 5792          dld             *AR2+, B
+ A    96 0019ca F495          nop
+ A    97 0019cb F495          nop
+ A    98                              
+ A    99 0019cc F48F          norm    A       ; shift
+ A   100 0019cd F78F          norm    B
+ A   101                      
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+scale.abs                                                            PAGE    3
+
+ A   102                      .global norm_ovm
+ A   103 0019ce       norm_ovm:
+ A   104                      
+ A   105 0019ce 4E93          dst             A, *AR3+        ; save data
+ A   106 0019cf 4F93          dst             B, *AR3+
+ A   107              
+ A   108 0019d0 E800          ld              #0, A   ; clear Acc
+ A   109 0019d1 8A08          popm    AL              ; pop the corrected scale factor into low Acc
+ A   110 0019d2 98A1          stl             A, 1, *AR4+             ; save with a 1-bit shift (mpy by 2)
+ A   111              
+ A   112 0019d3       sqmag_prescale_loop:
+ A   113              
+ A   114 0019d3 8A07          popm    ST1
+ A   115 0019d4 8A06          popm    ST0
+ A   116                      
+ A   117 0019d5 FE00          retd
+ A   118 0019d6 F495          nop
+ A   119 0019d7 F495          nop
+ A   120              
+ A   121              
+ A   122              ***
+ A   123              * _log_prescale
+ A   124              *
+ A   125              * Inputs:       N, number of values to scale in Acc,
+ A   126              *       ToS:            data input address (512x2 words present),
+ A   127              *                               data output address (512 words free),
+ A   128              *                               scale save address (512 words free)
+ A   129              
+ A   130              * History
+ A   131              * 
+ A   132              * v1.0  12 June 2012    Created
+ A   133              * v1.1  14 June 2012    Moved to single scale code file.
+ A   134              
+ A   135 0019d8       _log_prescale
+ A   136              
+ A   137              ; Set up processor for fractional, signed math
+ A   138 0019d8 4A06          pshm    ST0
+ A   139 0019d9 4A07          pshm    ST1
+ A   140 0019da F7BE          ssbx    CPL
+ A   141 0019db F7B6          ssbx    FRCT
+ A   142 0019dc F7B8          ssbx    SXM
+ A   143 0019dd F7B9          ssbx    OVM
+ A   144 0019de F6B7          rsbx    C16
+ A   145 0019df F495          nop
+ A   146 0019e0 F495          nop
+ A   147                      
+ A   148 0019e1 F010          sub     #1, A   ; BRC = N-1
+         0019e2 0001 
+ A   149 0019e3 881A          stlm    A, BRC
+ A   150 0019e4 7710          stm             #16, AR0        ; max shift value
+         0019e5 0010 
+ A   151 0019e6 7103          mvdk    idata, AR2      ; input pointer
+         0019e7 0012 
+ A   152 0019e8 7104          mvdk    odata, AR3      ; output pointer
+         0019e9 0013 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+scale.abs                                                            PAGE    4
+
+ A   153 0019ea 7105          mvdk    sdata, AR4      ; scale array pointer
+         0019eb 0014 
+ A   154                      
+ A   155 0019ec F072          rptb    log_prescale_loop - 1
+         0019ed 19FA+
+ A   156                      
+ A   157 0019ee 5692          dld             *AR2+, A
+ A   158 0019ef F48E          exp             A
+ A   159 0019f0 F495          nop
+ A   160                      
+ A   161 0019f1 490E          ldm             T, B            ; load T
+ A   162 0019f2 F310          sub             #4, B           ; guard bits
+         0019f3 0004 
+ A   163 0019f4 890E          stlm    B, T
+ A   164 0019f5 0184          add             *AR4, B         ; add any existing scale factor
+ A   165 0019f6 8194          stl             B, *AR4+        ; save back to scale array
+ A   166 0019f7 F495          nop
+ A   167 0019f8 F495          nop
+ A   168                                      
+ A   169 0019f9 F48F          norm    A       ; shift
+ A   170                      
+ A   171 0019fa 8293          sth             A, *AR3+        ; save data
+ A   172              
+ A   173 0019fb       log_prescale_loop:
+ A   174              
+ A   175 0019fb 8A07          popm    ST1
+ A   176 0019fc 8A06          popm    ST0
+ A   177                      
+ A   178 0019fd FE00          retd
+ A   179 0019fe F495          nop
+ A   180 0019ff F495          nop
+ A   181              
+ A   182              
+ A   183              ***
+ A   184              * _descale
+ A   185              *
+ A   186              * Inputs:       N, number of input points, in Acc
+ A   187              *       ToS:            data input address (512x2 words present, Q16.15 format)
+ A   188              *                               data output address     (512 words free, in-place okay)
+ A   189              *                               scale factor array (512 words present)
+ A   190              
+ A   191              * History
+ A   192              *
+ A   193              * v1.0  14 June 2012    Created.
+ A   194              *
+ A   195              
+ A   196        783F  log10o32767     .set    0x783F  ; ( log10(32767) * 2^15) >> 3
+ A   197        04D1  log10o2         .set    0x04D1  ; ( log10(2) * 2^15 ) >> 3
+ A   198              
+ A   199              
+ A   200 001a00       _descale:
+ A   201              
+ A   202 001a00 4A06          pshm    ST0
+ A   203 001a01 4A07          pshm    ST1
+ A   204 001a02 F7BE          ssbx    CPL
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+scale.abs                                                            PAGE    5
+
+ A   205 001a03 F6B6          rsbx    FRCT
+ A   206 001a04 F7B8          ssbx    SXM
+ A   207 001a05 F6B9          rsbx    OVM
+ A   208 001a06 F6B7          rsbx    C16
+ A   209 001a07 F495          nop
+ A   210 001a08 F495          nop
+ A   211                      
+ A   212 001a09 F010          sub     #1, A   ; BRC = N-1
+         001a0a 0001 
+ A   213 001a0b 881A          stlm    A, BRC
+ A   214 001a0c 7103          mvdk    idata, AR2      ; input pointer
+         001a0d 0012 
+ A   215 001a0e 7104          mvdk    odata, AR3      ; output pointer
+         001a0f 0013 
+ A   216 001a10 7105          mvdk    sdata, AR4      ; scale array pointer
+         001a11 0014 
+ A   217              
+ A   218 001a12 F072          rptb    descale_loop - 1
+         001a13 1A20+
+ A   219                      
+ A   220                      ; Docs say log10 outputs Q16.15, but this is misleading,
+ A   221                      ; format is S IIII IIII IIII IIII FFFF FFFF FFFF FFF
+ A   222 001a14 5692          dld             *AR2+, A
+ A   223 001a15 F47D          sfta    A, #-3
+ A   224                      
+ A   225 001a16 F120          ld              #log10o32767, B
+         001a17 783F 
+ A   226 001a18 F600          add             B, A
+ A   227                      
+ A   228 001a19 F120          ld              #log10o2, B
+         001a1a 04D1 
+ A   229              
+ A   230 001a1b 4794          rpt             *AR4+
+ A   231 001a1c F620          sub             B, A
+ A   232 001a1d F468          sfta    A, #8
+ A   233 001a1e F468          sfta    A, #8
+ A   234 001a1f F483          sat             A
+ A   235                      
+ A   236 001a20 8293          sth             A, *AR3+
+ A   237                      
+ A   238 001a21       descale_loop:
+ A   239              
+ A   240 001a21 8A07          popm    ST1
+ A   241 001a22 8A06          popm    ST0
+ A   242              
+ A   243 001a23 FE00          retd
+ A   244 001a24 F495          nop
+ A   245 001a25 F495          nop
+ A   246                      
+ A   247                      
+ A   248                      .end
+
+No Assembly Errors, No Assembly Warnings
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+scale.abs                                                            PAGE    6
+
+LABEL                                VALUE       DEFN    REF
+
+.TMS320C540                         000000          0 
+.TMS320C541                         000000          0 
+.TMS320C541A                        000000          0 
+.TMS320C542                         000001          0 
+.TMS320C543                         000000          0 
+.TMS320C544                         000000          0 
+.TMS320C545                         000000          0 
+.TMS320C545LP                       000000          0 
+.TMS320C546                         000000          0 
+.TMS320C546LP                       000000          0 
+.TMS320C548                         000000          0 
+.TMS320C549                         000000          0 
+__TI_ASSEMBLER_VERSION__            3d10d0          0 
+__far_mode                          000000          0 
+__lflags                            000000          0 
+__no_fret                           000000          0 
+__stores_bug                        000000          0 
+_descale                            001a00+     A 200  A  29 
+_log_prescale                       0019d8+     A 135  A  29 
+_sqmag_prescale                     00199f+     A  46  A  29 
+descale_loop                        001a21+     A 238  A 218 
+log10o2                             0004d1      A 197  A 228 
+log10o32767                         00783f      A 196  A 225 
+log_prescale_loop                   0019fb+     A 173  A 155 
+norm_ovm                            0019ce+     A 103  A 102 
+sqmag_prescale_loop                 0019d3+     A 112  A  66 

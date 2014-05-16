@@ -1,0 +1,117 @@
+/* set PMST to: MP =  OVLY = 1; DROM off, CLKOUT on */
+#define PMST_VAL        0xffe0u  
+
+/* set wait-state control reg for: 2 w/s or more on i/o; one for ext memory */
+#define SWWSR_VAL       0x7FFFu
+
+/* set external-banks switch control for: no bank switching; BH set */
+#define BSCR_VAL        0x02u
+
+/* Set Default Reset Initialization Value */
+#define    ZEROS        0x0000u
+
+/* Set Peripheral Control Register Addresses for DEV_RESET */
+#define DMPREC          0x0054u
+#define DMSA            0x0055u
+#define DMSDI           0x0056u
+
+#define BSP_SPSA     0x0038u
+#define BSP_SPSD     0x0039u
+
+#define BSP_SPCR_SUB_ADDR   0x0000u
+#define BSP_SRGR_SUB_ADDR   0x0006u
+#define BSP_MCR_SUB_ADDR    0x0008u
+#define SRGR_INIT             0x0001u
+
+#define PRD0            0x0025u
+#define TCR0            0x0026u
+
+
+
+
+/* The Startup() function is executed when the GEL file is loaded. */
+
+StartUp()
+{   
+
+	GEL_MapOn();
+	GEL_MapReset();
+
+	GEL_MapAdd(0x80u,0,0x2780u,1,1);	/* DARAM */
+	GEL_MapAdd(0x2800u,0,0xD780u,1,1);	/* External */
+
+	GEL_MapAdd(0x0u,1,0x60u,1,1);		/* MMRs */
+	GEL_MapAdd(0x60u,1,0x27A0u,1,1);	/* DARAM */
+	GEL_MapAdd(0x2800u,1,0xD800u,1,1);	/* External */
+
+	GEL_TextOut("Gel StartUp Complete.\n");
+}
+
+OnTargetConnect()
+{
+
+	C542_Init(); 
+
+}
+
+
+menuitem "C542_Configuration";
+hotmenu CPU_Reset()
+{
+	GEL_Reset();
+	PMST = PMST_VAL;
+
+/* don't change the wait states, let the application code handle it */
+/* note: at power up all wait states will be the maximum (7)        */
+/*	SWWSR = SWWSR_VAL;                                          */
+
+	BSCR = BSCR_VAL;
+
+	GEL_TextOut("CPU Reset Complete.\n");
+}
+
+
+
+/* All memory maps are based on the PMST value of 0xFFE0 */
+
+hotmenu C542_Init()
+{
+	GEL_Reset();
+	PMST = PMST_VAL;
+
+/* don't change the wait states, let the application code handle it */
+/* note: at power up all wait states will be the maximum (7)        */
+/*	SWWSR = SWWSR_VAL;                                          */
+
+	BSCR = BSCR_VAL;
+
+	C542_Periph_Reset();
+
+	GEL_TextOut("C542_Init Complete.\n");
+}
+
+
+/* ****************************** */
+
+C542_Periph_Reset()
+{
+	IFR = 0xFFFFu;  
+	IFR = 0x0000u;  
+
+	BSP_Reset();
+}
+
+
+
+BSP_Reset()
+{
+	*(int *)BSP_SPSA = BSP_SPCR_SUB_ADDR;    
+	*(int *)BSP_SPSD = ZEROS;                   
+                 
+	*(int *)BSP_SPSA = BSP_SRGR_SUB_ADDR;    
+	*(int *)BSP_SPSD = SRGR_INIT;              
+
+	*(int *)BSP_SPSA = BSP_MCR_SUB_ADDR;     
+	*(int *)BSP_SPSD = ZEROS;                   
+}
+

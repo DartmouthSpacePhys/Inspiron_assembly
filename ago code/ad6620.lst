@@ -1,0 +1,1643 @@
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE    1
+
+      69 000000                 .text
+      70                        .copy       "ad6620.asm"
+ A     1              ****
+ A     2              * AD6620 setup functions and tables
+ A     3              ***
+ A     4              
+ A     5              * History
+ A     6              * 
+ A     7              * v1.0  3 June 2012     Converted from an .include file to a compilable, sectioned file.
+ A     8              *
+ A     9              
+ A    10                      .mmregs
+ A    11                      .def    rsp_clear, rsp_reset, rsp_init, rsp_mstart, rsp_sstart
+ A    12              ;       .def    ad6620_soft_reset, ad6620_filter, ad6620_master_run, rsp_setup
+ A    13                      .include "rx-dsp.h"
+ A    14 000c00               .sect   ".ad6620"
+ A    15              
+ A    16              *
+ A    17              * rsp_reset, rsp_init, rsp_mstart, rsp_sstart
+ A    18              *       shell functions over rsp_setup
+ A    19              *       
+ A    20              
+ A    21 000c00       rsp_reset:
+ A    22 000c00 F020          ld      #ad6620_soft_reset, A ; Put AD6620 into reset
+         000c01 1009+
+ A    23 000c02 F074          call    rsp_setup
+         000c03 0C3C+
+ A    24                      
+ A    25 000c04 FE00          retd
+ A    26 000c05 F495          nop
+ A    27 000c06 F495          nop
+ A    28                      
+ A    29 000c07       rsp_init:
+ A    30 000c07 F020          ld      #ad6620_filter,A ; Set up AD6620 filter
+         000c08 0CB4+
+ A    31 000c09 F074          call    rsp_setup
+         000c0a 0C3C+
+ A    32                      
+ A    33 000c0b FE00          retd
+ A    34 000c0c F495          nop
+ A    35 000c0d F495          nop
+ A    36              
+ A    37 000c0e       rsp_mstart:
+ A    38 000c0e F020          ld      #ad6620_master_run, A   ; Start digitizing as master
+         000c0f 100E+
+ A    39 000c10 F074          call    rsp_setup
+         000c11 0C3C+
+ A    40                      
+ A    41 000c12 FE00          retd
+ A    42 000c13 F495          nop
+ A    43 000c14 F495          nop
+ A    44              
+ A    45 000c15       rsp_sstart:
+ A    46 000c15 F020          ld      #ad6620_slave_run, A    ; Start digitizing as slave
+         000c16 1013+
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE    2
+
+ A    47 000c17 F074          call    rsp_setup
+         000c18 0C3C+
+ A    48                      
+ A    49 000c19 FE00          retd
+ A    50 000c1a F495          nop
+ A    51 000c1b F495          nop
+ A    52              
+ A    53                      
+ A    54              *
+ A    55              * rsp_clear     Function to clear RCF Data RAM between frames
+ A    56              *
+ A    57              
+ A    58 000c1c       rsp_clear:
+ A    59 000c1c 7713          stm             #100000001b, AR3
+         000c1d 0101 
+ A    60 000c1e F495          nop
+ A    61 000c1f F495          nop
+ A    62 000c20 7513          portw   AR3, (wr_rx+amr)        ; Load high and low address registers: 
+         000c21 4007 
+ A    63 000c22 7713          stm             #0, AR3
+         000c23 0000 
+ A    64 000c24 F495          nop
+ A    65 000c25 F495          nop
+ A    66 000c26 7513          portw   AR3, (wr_rx+lar)        ; write to RAM address 0x100, auto-increment
+         000c27 4006 
+ A    67                      
+ A    68 000c28 771A          stm             #0xFF-1, BRC
+         000c29 00FE 
+ A    69 000c2a F495          nop
+ A    70 000c2b F495          nop
+ A    71 000c2c F072          rptb    rsp_clear_loop - 1
+         000c2d 0C38+
+ A    72                      
+ A    73 000c2e 7513          portw   AR3, (wr_rx+dr4)
+         000c2f 4004 
+ A    74 000c30 7513          portw   AR3, (wr_rx+dr3)
+         000c31 4003 
+ A    75 000c32 7513          portw   AR3, (wr_rx+dr2)
+         000c33 4002 
+ A    76 000c34 7513          portw   AR3, (wr_rx+dr1)
+         000c35 4001 
+ A    77 000c36 7513          portw   AR3, (wr_rx+dr0)
+         000c37 4000 
+ A    78 000c38 F495          nop
+ A    79              
+ A    80 000c39       rsp_clear_loop:
+ A    81              
+ A    82 000c39 FE00          retd
+ A    83 000c3a F495          nop
+ A    84 000c3b F495          nop
+ A    85                      
+ A    86                      
+ A    87              ;;
+ A    88              ; Test of AD6620 set-up from look-up table
+ A    89              ;;
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE    3
+
+ A    90              
+ A    91              ;table_test:
+ A    92              ;       ld      #000Dh,A        ; Output CR 
+ A    93              ;       call    asx
+ A    94              ;       ld      #000Ah,A        ; LF 
+ A    95              ;       call    asx
+ A    96              ;
+ A    97              ;       ld      #ad6620_filter,A
+ A    98              ;       call    rsp_setup
+ A    99              ;       b       monitor_entry
+ A   100              
+ A   101              ;
+ A   102              ; Load RSP (AD6620) Registers from Table
+ A   103              ;
+ A   104              ; 23 Dec 2009 took out most writes to terminal (msgout, dis4hex, asx)
+ A   105              ;
+ A   106              ; This code was taken directly from the "rspmod" routine used in the
+ A   107              ; Dartmouth Monitor. Instead of having the user enter the data words
+ A   108              ; or receiving them from a "script" file, this routine looks at a
+ A   109              ; table of words in memory, reads them, and transfers them to the
+ A   110              ; AD6620. Used to load control bytes and filter coefficients.
+ A   111              ;
+ A   112              ; Table entry format:
+ A   113              ;
+ A   114              ; rsp_table:
+ A   115              ;       .word   AmLah, r4r3h, r2r1h, r0xxh;
+ A   116              ;       .word   (more 4-word entries)
+ A   117              ;       .word   0FFFFh  ; End of table
+ A   118              ;
+ A   119              ; 4 words:
+ A   120              ; AAaah = AD6620 internal address, 0000h to 030Dh, or FFFFh to terminate.
+ A   121              ;         AMR = Ma Address mode register
+ A   122              ;         LAR = La Lower address register
+ A   123              ; r4r3h, r2r1h, r0xxh = data bytes, packed into words, MS, to LS. Bottom byte
+ A   124              ;         of 3rd word not used (xx). Data is treated a 40 bits for all
+ A   125              ;         AD6620 registers. Not the most compact arrangement for storage,
+ A   126              ;         but readable- and it can be edited directly from monitor scripts.
+ A   127              ;
+ A   128              ;         DR4 = r4
+ A   129              ;         DR3 = r3
+ A   130              ;         DR2 = r2
+ A   131              ;         DR1 = r1
+ A   132              ;         DR0 = r0 
+ A   133              ;
+ A   134              ; Uses:
+ A   135              ; A:   Holds table pointer upon entry 
+ A   136              ; B:   Working register
+ A   137              ; AR0: I/O address
+ A   138              ; AR2: Table index
+ A   139              ; AR3: Holds data to send to or read from I/O port
+ A   140              ;
+ A   141        FFFF  table_end .set 0FFFFh           ; End-of-table definition
+ A   142              
+ A   143 000c3c       rsp_setup:                      ; Enter with table starting address in A
+ A   144 000c3c 8812          stlm    A,AR2           ; Save to AR2 for later use
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE    4
+
+ A   145 000c3d F495          nop                     ; Necessary for loop to execute properly (?!&)
+ A   146 000c3e F495          nop                     ; Necessary for loop to execute properly (?!&)
+ A   147              ;       ld      #ad6620_msg1,A  ; Tell operator what is happening
+ A   148              ;       call    msgout  
+ A   149              
+ A   150 000c3f       rsp_loop:
+ A   151              ;       ldm     AR2,A           ; Retrieve table index
+ A   152              ;       call    dis4hex         ; Display index of table line
+ A   153              ;       ld      #0020h,A        ; Space over on screen 
+ A   154              ;       call    asx
+ A   155              
+ A   156 000c3f 6082          cmpm    *AR2,#table_end ; Is this the end of the table?
+         000c40 FFFF 
+ A   157 000c41 F830          bc      rspx,TC         ; Return if at end              
+         000c42 0C70+
+ A   158              
+ A   159 000c43 1092          ld      *AR2+,A         ; Get first table word: AD6620 address
+ A   160 000c44 F540          ld      A,B             ; Save a copy
+ A   161              
+ A   162              ;       call    dis4hex         ; Display
+ A   163              ;
+ A   164              ; Transfer RSP register address bytes to AD6620 high and low address registers
+ A   165              ;
+ A   166 000c45 F0F8          sftl    A,-8,A          ; Shift high byte to low byte
+ A   167 000c46 F030          and     #0003h,A,A      ; Mask high byte to 2 LSBs (avoid reserved bits
+         000c47 0003 
+ A   168                                              ; and do not auto-increment for now)
+ A   169 000c48 8813          stlm    A,AR3           ; Move to AR3 for portw
+ A   170 000c49 7513          portw AR3,wr_rx+amr     ; Write to high address register
+         000c4a 4007 
+ A   171 000c4b F640          ld      B,A             ; Get RSP register address
+ A   172 000c4c F030          and     #00FFh,A,A      ; Mask to low byte only (actually hardware
+         000c4d 00FF 
+ A   173                                              ; only uses bits 7:0 of data bus, should not
+ A   174                                              ; need to mask)
+ A   175 000c4e 8813          stlm    A,AR3
+ A   176 000c4f 7513          portw AR3,wr_rx+lar     ; Write to low address register
+         000c50 4006 
+ A   177              
+ A   178              ;       ld      #0020h,A        ; Space over
+ A   179              ;       call    asx
+ A   180              
+ A   181 000c51 1092          ld      *AR2+,A         ; Get next table word (dr4 and dr3 bytes)
+ A   182 000c52 F540          ld      A,B             ; Save a copy
+ A   183              
+ A   184              ;       call    dis4hex         ; Display
+ A   185              
+ A   186 000c53 F0F8          sftl    A,-8,A          ; Shift high byte to low byte
+ A   187 000c54 8813          stlm    A,AR3           ; AR3 holds output data
+ A   188 000c55 7513          portw   AR3,wr_rx+dr4   ; Store to AD6620 MS data byte register
+         000c56 4004 
+ A   189              
+ A   190 000c57 F640          ld      B,A             ; Get copy
+ A   191 000c58 F030          and     #00FFh,A,A      ; Mask to low byte only
+         000c59 00FF 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE    5
+
+ A   192 000c5a 8813          stlm    A,AR3
+ A   193 000c5b 7513          portw   AR3,wr_rx+dr3
+         000c5c 4003 
+ A   194              
+ A   195              ;       ld      #0020h,A        ; Space over
+ A   196              ;       call    asx
+ A   197              
+ A   198 000c5d 1092          ld      *AR2+,A         ; Get next table word (dr2 and dr1 bytes)
+ A   199 000c5e F540          ld      A,B             ; Save a copy
+ A   200              
+ A   201              ;       call    dis4hex         ; Display
+ A   202              
+ A   203 000c5f F0F8          sftl    A,-8,A          ; Shift high byte to low byte
+ A   204 000c60 8813          stlm    A,AR3
+ A   205 000c61 7513          portw   AR3,wr_rx+dr2
+         000c62 4002 
+ A   206              
+ A   207 000c63 F640          ld      B,A             ; Get copy
+ A   208 000c64 F030          and     #00FFh,A,A      ; Mask to low byte only
+         000c65 00FF 
+ A   209 000c66 8813          stlm    A,AR3
+ A   210 000c67 7513          portw   AR3,wr_rx+dr1
+         000c68 4001 
+ A   211              
+ A   212              ;       ld      #0020h,A        ; Space over
+ A   213              ;       call    asx
+ A   214              
+ A   215 000c69 1092          ld      *AR2+,A         ; Get next table word (dr0 in upper byte)
+ A   216              
+ A   217              ;       call    dis4hex         ; Display
+ A   218              
+ A   219 000c6a F0F8          sftl    A,-8,A          ; Shift high byte to low byte
+ A   220 000c6b 8813          stlm    A, AR3          ; Save for subsequent output port write
+ A   221 000c6c 7513          portw   AR3,wr_rx+dr0   ; Address for RSP LS data byte
+         000c6d 4000 
+ A   222              
+ A   223              ;       ld      #0020h,A        ; Space over
+ A   224              ;       call    asx
+ A   225              ;       ld      #000Dh,A        ; Output CR 
+ A   226              ;       call    asx
+ A   227              ;       ld      #000Ah,A        ; LF 
+ A   228              ;       call    asx
+ A   229              
+ A   230 000c6e F073          b       rsp_loop        ; Go back for next table entry
+         000c6f 0C3F+
+ A   231 000c70       rspx:
+ A   232              ;       ld      #ad6620_msg2,A
+ A   233              ;       call    msgout
+ A   234 000c70 FC00          ret
+ A   235              
+ A   236              ;
+ A   237              ; Receiver telemetry static header
+ A   238              ;
+ A   239              ; Comment/uncomment as needed for master/slave
+ A   240              
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE    6
+
+ A   241              ;
+ A   242              ; Receiver telemetry static header
+ A   243              ;
+ A   244              ; Comment/uncomment as needed for master/slave
+ A   245              
+ A   246 000c71       master_header:
+ A   247 000c71 4461          .pstring        "Dartmouth College Master RxDSP  "
+         000c72 7274 
+         000c73 6D6F 
+         000c74 7574 
+         000c75 6820 
+         000c76 436F 
+         000c77 6C6C 
+         000c78 6567 
+         000c79 6520 
+         000c7a 4D61 
+         000c7b 7374 
+         000c7c 6572 
+         000c7d 2052 
+         000c7e 7844 
+         000c7f 5350 
+         000c80 2020 
+ A   248 000c81 0000          .word   0000h   ; Null terminator
+ A   249                      
+ A   250 000c82       slave_header:
+ A   251 000c82 4461          .pstring        "Dartmouth College Slave  RxDSP  "
+         000c83 7274 
+         000c84 6D6F 
+         000c85 7574 
+         000c86 6820 
+         000c87 436F 
+         000c88 6C6C 
+         000c89 6567 
+         000c8a 6520 
+         000c8b 536C 
+         000c8c 6176 
+         000c8d 6520 
+         000c8e 2052 
+         000c8f 7844 
+         000c90 5350 
+         000c91 2020 
+ A   252 000c92 0000          .word   0000h   ; Null terminator
+ A   253              ;
+ A   254              ; AD6620 set-up messages
+ A   255              ;
+ A   256 000c93       static_minor_footer:
+ A   257 000c93 DA27          .word   0DA27h ; 1101101000100111
+ A   258 000c94 FFFF          .word   0FFFFh ; 1111111111111111
+ A   259 000c95 AAAA          .word   0AAAAh ; 1010101010101010
+ A   260 000c96 1B33          .word   01B33h ; 1100110011001100
+ A   261 000c97 0000          .word   0000h ; Null Terminator
+ A   262              
+ A   263 000c98       ad6620_msg1:
+ A   264 000c98 0D0A          .word   0D0Ah
+ A   265 000c99 4144          .pstring "AD6620 set-up: MASTER "
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE    7
+
+         000c9a 3636 
+         000c9b 3230 
+         000c9c 2073 
+         000c9d 6574 
+         000c9e 2D75 
+         000c9f 703A 
+         000ca0 204D 
+         000ca1 4153 
+         000ca2 5445 
+         000ca3 5220 
+ A   266              ;S    .pstring "AD6620 set-up: SLAVE  "
+ A   267 000ca4 0D0A          .word   0D0Ah,0000h
+         000ca5 0000 
+ A   268 000ca6       ad6620_msg2:
+ A   269 000ca6 0D0A          .word   0D0Ah
+ A   270 000ca7 4144          .pstring "AD6620 set-up complete"
+         000ca8 3636 
+         000ca9 3230 
+         000caa 2073 
+         000cab 6574 
+         000cac 2D75 
+         000cad 7020 
+         000cae 636F 
+         000caf 6D70 
+         000cb0 6C65 
+         000cb1 7465 
+ A   271 000cb2 0D0A          .word   0D0Ah,0000h
+         000cb3 0000 
+ A   272              
+ A   273              ;
+ A   274              ; AD6620 Set-Up Tables:
+ A   275              ; See subroutine rsp_setup for format details.
+ A   276              ; Briefly, AD6620 internal address word is
+ A   277              ; followed by 3 words containing up to 40
+ A   278              ; bits of set-up data. The last byte is not used.
+ A   279              ; Table end is denoted by 0FFFFh in the address
+ A   280              ; field.
+ A   281              ;
+ A   282              ; *** Note *** be sure to comment/uncomment Master/Slave table entries
+ A   283              ; as needed at beginning and end of table
+ A   284              ;
+ A   285              ;
+ A   286              ; AD6620 set-up captured from AD6620.exe "dialog"
+ A   287              ; Filter source file: ad_4_5_10.f20
+ A   288              ; View frequency response using Analog Devices FilterDesign.exe
+ A   289              ;
+ A   290              ; Design specs
+ A   291              ; Frequency out from NCO center)   Attenuation
+ A   292              ; 0 kHz (implied)                      0 dB
+ A   293              ; 150 kHz                              0 dB
+ A   294              ; 166.67 kHz                         -60 dB
+ A   295              ; 1 dB of passband ripple
+ A   296              ; Input sampling rate            66.6666 MHz
+ A   297              ; Output rate                    333.333 kHz
+ A   298              ; Decimation factor                  200
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE    8
+
+ A   299              ;
+ A   300              ; Response from plot
+ A   301              ; -3dB at 154 kHz
+ A   302              ; -6dB at 156 kHz
+ A   303              ; -66 dB in the stopband (166.67 kHz and greater).
+ A   304              ; Passband looks very flat out to 150 kHz, but if you zoom in on the
+ A   305              ; plot, you can see less than 0.5 dB of ripple, about 0.42 dB or so.
+ A   306              ;
+ A   307              ;
+ A   308              ; Converted to assembly ".word" directives in Excel spreadsheet m4510.xls
+ A   309               
+ A   310 000cb4       ad6620_filter:
+ A   311 000cb4 0301          .word    0301h, 00000h, 00000h, 00000h  ; NCO Control
+         000cb5 0000 
+         000cb6 0000 
+         000cb7 0000 
+ A   312 000cb8 0302          .word    0302h, 000FFh, 0FFFFh, 0FF00h  ; NCO Sync Mask
+         000cb9 00FF 
+         000cba FFFF 
+         000cbb FF00 
+ A   313              ;        .word    0303h, 0000Ah, 08F5Ch, 0DA00h ; NCO Frequency = 2.75 MHz
+ A   314              ; 23 Dec 2009
+ A   315              ;        .word    0303h, 0000Ah, 040B8h, 02C00h  ; NCO Frequency = 2.67 MHz
+ A   316              ;        .word    0303h, 00005h, 09168h, 0D000h  ; NCO Frequency = 1.45 MHz
+ A   317 000cbc 0303                  .word    0x303, 0x0001, 0xeb85, 0x3f00  ; NCO Frequency = 500 kHz
+         000cbd 0001 
+         000cbe EB85 
+         000cbf 3F00 
+ A   318 000cc0 0304          .word    0304h, 00000h, 00000h, 00000h  ; NCO Phase Offset
+         000cc1 0000 
+         000cc2 0000 
+         000cc3 0000 
+ A   319 000cc4 0305          .word    0305h, 00000h, 00000h, 00500h  ; Input/CIC2 Scale
+         000cc5 0000 
+         000cc6 0000 
+         000cc7 0500 
+ A   320 000cc8 0306          .word    0306h, 00000h, 00000h, 00900h  ; MCIC2-1
+         000cc9 0000 
+         000cca 0000 
+         000ccb 0900 
+ A   321 000ccc 0307          .word    0307h, 00000h, 00000h, 00700h  ; CIC5 Scale
+         000ccd 0000 
+         000cce 0000 
+         000ccf 0700 
+ A   322 000cd0 0308          .word    0308h, 00000h, 00000h, 00400h  ; MCIC5-1
+         000cd1 0000 
+         000cd2 0000 
+         000cd3 0400 
+ A   323 000cd4 0309          .word    0309h, 00000h, 00000h, 00400h  ; Output/RCF Control
+         000cd5 0000 
+         000cd6 0000 
+         000cd7 0400 
+ A   324 000cd8 030A          .word    030Ah, 00000h, 00000h, 00300h  ; MRCF-1
+         000cd9 0000 
+         000cda 0000 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE    9
+
+         000cdb 0300 
+ A   325 000cdc 030B          .word    030Bh, 00000h, 00000h, 00000h  ; RFC Address Offset
+         000cdd 0000 
+         000cde 0000 
+         000cdf 0000 
+ A   326 000ce0 030C          .word    030Ch, 00000h, 00000h, 0C700h  ; Ntaps-1
+         000ce1 0000 
+         000ce2 0000 
+         000ce3 C700 
+ A   327 000ce4 030D          .word    030Dh, 00000h, 00000h, 00000h  ; Reserved (zero)
+         000ce5 0000 
+         000ce6 0000 
+         000ce7 0000 
+ A   328 000ce8 0000          .word    0000h, 00000h, 00005h, 0D300h  ; RCF Filter Coefficients
+         000ce9 0000 
+         000cea 0005 
+         000ceb D300 
+ A   329 000cec 0001          .word    0001h, 0FFFFh, 0FFFEh, 03C00h  
+         000ced FFFF 
+         000cee FFFE 
+         000cef 3C00 
+ A   330 000cf0 0002          .word    0002H, 0FFFFH, 0FFFFH, 09900H  
+         000cf1 FFFF 
+         000cf2 FFFF 
+         000cf3 9900 
+ A   331 000cf4 0003          .word    0003H, 0FFFFH, 0FFF5H, 08F00H  
+         000cf5 FFFF 
+         000cf6 FFF5 
+         000cf7 8F00 
+ A   332 000cf8 0004          .word    0004H, 0FFFFH, 0FFEFH, 0D500H  
+         000cf9 FFFF 
+         000cfa FFEF 
+         000cfb D500 
+ A   333 000cfc 0005          .word    0005H, 0FFFFH, 0FFE6H, 09B00H  
+         000cfd FFFF 
+         000cfe FFE6 
+         000cff 9B00 
+ A   334 000d00 0006          .word    0006H, 0FFFFH, 0FFE3H, 0FA00H  
+         000d01 FFFF 
+         000d02 FFE3 
+         000d03 FA00 
+ A   335 000d04 0007          .word    0007H, 0FFFFH, 0FFE4H, 0C300H  
+         000d05 FFFF 
+         000d06 FFE4 
+         000d07 C300 
+ A   336 000d08 0008          .word    0008H, 0FFFFH, 0FFEDH, 04C00H  
+         000d09 FFFF 
+         000d0a FFED 
+         000d0b 4C00 
+ A   337 000d0c 0009          .word    0009H, 0FFFFH, 0FFF8H, 08600H  
+         000d0d FFFF 
+         000d0e FFF8 
+         000d0f 8600 
+ A   338 000d10 000A          .word    000AH, 00000H, 00005H, 00900H  
+         000d11 0000 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   10
+
+         000d12 0005 
+         000d13 0900 
+ A   339 000d14 000B          .word    000BH, 00000H, 0000CH, 0B000H  
+         000d15 0000 
+         000d16 000C 
+         000d17 B000 
+ A   340 000d18 000C          .word    000CH, 00000H, 0000EH, 03B00H  
+         000d19 0000 
+         000d1a 000E 
+         000d1b 3B00 
+ A   341 000d1c 000D          .word    000DH, 00000H, 00008H, 03B00H  
+         000d1d 0000 
+         000d1e 0008 
+         000d1f 3B00 
+ A   342 000d20 000E          .word    000EH, 0FFFFH, 0FFFEH, 0C000H  
+         000d21 FFFF 
+         000d22 FFFE 
+         000d23 C000 
+ A   343 000d24 000F          .word    000FH, 0FFFFH, 0FFF5H, 08A00H
+         000d25 FFFF 
+         000d26 FFF5 
+         000d27 8A00 
+ A   344 000d28 0010          .word    0010H, 0FFFFH, 0FFF1H, 0E200H
+         000d29 FFFF 
+         000d2a FFF1 
+         000d2b E200 
+ A   345 000d2c 0011          .word    0011H, 0FFFFH, 0FFF5H, 01800H
+         000d2d FFFF 
+         000d2e FFF5 
+         000d2f 1800 
+ A   346 000d30 0012          .word    0012H, 0FFFFH, 0FFFEH, 04900H
+         000d31 FFFF 
+         000d32 FFFE 
+         000d33 4900 
+ A   347 000d34 0013          .word    0013H, 00000H, 00008H, 08100H
+         000d35 0000 
+         000d36 0008 
+         000d37 8100 
+ A   348 000d38 0014          .word    0014H, 00000H, 0000EH, 0F700H
+         000d39 0000 
+         000d3a 000E 
+         000d3b F700 
+ A   349 000d3c 0015          .word    0015H, 00000H, 0000DH, 0B300H
+         000d3d 0000 
+         000d3e 000D 
+         000d3f B300 
+ A   350 000d40 0016          .word    0016H, 00000H, 00005H, 05300H
+         000d41 0000 
+         000d42 0005 
+         000d43 5300 
+ A   351 000d44 0017          .word    0017H, 0FFFFH, 0FFF9H, 07900H
+         000d45 FFFF 
+         000d46 FFF9 
+         000d47 7900 
+ A   352 000d48 0018          .word    0018H, 0FFFFH, 0FFF0H, 07500H
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   11
+
+         000d49 FFFF 
+         000d4a FFF0 
+         000d4b 7500 
+ A   353 000d4c 0019          .word    0019H, 0FFFFH, 0FFEEH, 0F300H
+         000d4d FFFF 
+         000d4e FFEE 
+         000d4f F300 
+ A   354 000d50 001A          .word    001AH, 0FFFFH, 0FFF6H, 07D00H
+         000d51 FFFF 
+         000d52 FFF6 
+         000d53 7D00 
+ A   355 000d54 001B          .word    001BH, 00000H, 00003H, 07F00H
+         000d55 0000 
+         000d56 0003 
+         000d57 7F00 
+ A   356 000d58 001C          .word    001CH, 00000H, 0000FH, 0A800H
+         000d59 0000 
+         000d5a 000F 
+         000d5b A800 
+ A   357 000d5c 001D          .word    001DH, 00000H, 00014H, 04F00H
+         000d5d 0000 
+         000d5e 0014 
+         000d5f 4F00 
+ A   358 000d60 001E          .word    001EH, 00000H, 0000EH, 09500H
+         000d61 0000 
+         000d62 000E 
+         000d63 9500 
+ A   359 000d64 001F          .word    001FH, 00000H, 00000H, 09C00H
+         000d65 0000 
+         000d66 0000 
+         000d67 9C00 
+ A   360 000d68 0020          .word    0020H, 0FFFFH, 0FFF1H, 06300H
+         000d69 FFFF 
+         000d6a FFF1 
+         000d6b 6300 
+ A   361 000d6c 0021          .word    0021H, 0FFFFH, 0FFE8H, 0BD00H
+         000d6d FFFF 
+         000d6e FFE8 
+         000d6f BD00 
+ A   362 000d70 0022          .word    0022H, 0FFFFH, 0FFEBH, 0E200H
+         000d71 FFFF 
+         000d72 FFEB 
+         000d73 E200 
+ A   363 000d74 0023          .word    0023H, 0FFFFH, 0FFF9H, 0E700H
+         000d75 FFFF 
+         000d76 FFF9 
+         000d77 E700 
+ A   364 000d78 0024          .word    0024H, 00000H, 0000CH, 04100H
+         000d79 0000 
+         000d7a 000C 
+         000d7b 4100 
+ A   365 000d7c 0025          .word    0025H, 00000H, 00019H, 06500H
+         000d7d 0000 
+         000d7e 0019 
+         000d7f 6500 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   12
+
+ A   366 000d80 0026          .word    0026H, 00000H, 0001AH, 00500H
+         000d81 0000 
+         000d82 001A 
+         000d83 0500 
+ A   367 000d84 0027          .word    0027H, 00000H, 0000CH, 0D100H
+         000d85 0000 
+         000d86 000C 
+         000d87 D100 
+ A   368 000d88 0028          .word    0028H, 0FFFFH, 0FFF7H, 0DA00H
+         000d89 FFFF 
+         000d8a FFF7 
+         000d8b DA00 
+ A   369 000d8c 0029          .word    0029H, 0FFFFH, 0FFE5H, 0A500H
+         000d8d FFFF 
+         000d8e FFE5 
+         000d8f A500 
+ A   370 000d90 002A          .word    002AH, 0FFFFH, 0FFE0H, 03100H
+         000d91 FFFF 
+         000d92 FFE0 
+         000d93 3100 
+ A   371 000d94 002B          .word    002BH, 0FFFFH, 0FFEBH, 03A00H
+         000d95 FFFF 
+         000d96 FFEB 
+         000d97 3A00 
+ A   372 000d98 002C          .word    002CH, 00000H, 00002H, 02E00H
+         000d99 0000 
+         000d9a 0002 
+         000d9b 2E00 
+ A   373 000d9c 002D          .word    002DH, 00000H, 00019H, 0A200H
+         000d9d 0000 
+         000d9e 0019 
+         000d9f A200 
+ A   374 000da0 002E          .word    002EH, 00000H, 00025H, 02700H
+         000da1 0000 
+         000da2 0025 
+         000da3 2700 
+ A   375 000da4 002F          .word    002FH, 00000H, 0001DH, 0B100H
+         000da5 0000 
+         000da6 001D 
+         000da7 B100 
+ A   376 000da8 0030          .word    0030H, 00000H, 00005H, 0DF00H
+         000da9 0000 
+         000daa 0005 
+         000dab DF00 
+ A   377 000dac 0031          .word    0031H, 0FFFFH, 0FFE9H, 02400H
+         000dad FFFF 
+         000dae FFE9 
+         000daf 2400 
+ A   378 000db0 0032          .word    0032H, 0FFFFH, 0FFD6H, 08400H
+         000db1 FFFF 
+         000db2 FFD6 
+         000db3 8400 
+ A   379 000db4 0033          .word    0033H, 0FFFFH, 0FFD8H, 0A600H
+         000db5 FFFF 
+         000db6 FFD8 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   13
+
+         000db7 A600 
+ A   380 000db8 0034          .word    0034H, 0FFFFH, 0FFEFH, 0F900H
+         000db9 FFFF 
+         000dba FFEF 
+         000dbb F900 
+ A   381 000dbc 0035          .word    0035H, 00000H, 00011H, 09100H
+         000dbd 0000 
+         000dbe 0011 
+         000dbf 9100 
+ A   382 000dc0 0036          .word    0036H, 00000H, 0002CH, 04A00H
+         000dc1 0000 
+         000dc2 002C 
+         000dc3 4A00 
+ A   383 000dc4 0037          .word    0037H, 00000H, 00031H, 05000H
+         000dc5 0000 
+         000dc6 0031 
+         000dc7 5000 
+ A   384 000dc8 0038          .word    0038H, 00000H, 0001CH, 06100H
+         000dc9 0000 
+         000dca 001C 
+         000dcb 6100 
+ A   385 000dcc 0039          .word    0039H, 0FFFFH, 0FFF6H, 0AA00H
+         000dcd FFFF 
+         000dce FFF6 
+         000dcf AA00 
+ A   386 000dd0 003A          .word    003AH, 0FFFFH, 0FFD3H, 01A00H
+         000dd1 FFFF 
+         000dd2 FFD3 
+         000dd3 1A00 
+ A   387 000dd4 003B          .word    003BH, 0FFFFH, 0FFC4H, 0DB00H
+         000dd5 FFFF 
+         000dd6 FFC4 
+         000dd7 DB00 
+ A   388 000dd8 003C          .word    003CH, 0FFFFH, 0FFD5H, 02F00H
+         000dd9 FFFF 
+         000dda FFD5 
+         000ddb 2F00 
+ A   389 000ddc 003D          .word    003DH, 0FFFFH, 0FFFDH, 0B900H
+         000ddd FFFF 
+         000dde FFFD 
+         000ddf B900 
+ A   390 000de0 003E          .word    003EH, 00000H, 0002AH, 0A700H
+         000de1 0000 
+         000de2 002A 
+         000de3 A700 
+ A   391 000de4 003F          .word    003FH, 00000H, 00044H, 04200H
+         000de5 0000 
+         000de6 0044 
+         000de7 4200 
+ A   392 000de8 0040          .word    0040H, 00000H, 0003BH, 04A00H
+         000de9 0000 
+         000dea 003B 
+         000deb 4A00 
+ A   393 000dec 0041          .word    0041H, 00000H, 00011H, 0BE00H
+         000ded 0000 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   14
+
+         000dee 0011 
+         000def BE00 
+ A   394 000df0 0042          .word    0042H, 0FFFFH, 0FFDBH, 04800H
+         000df1 FFFF 
+         000df2 FFDB 
+         000df3 4800 
+ A   395 000df4 0043          .word    0043H, 0FFFFH, 0FFB4H, 00300H
+         000df5 FFFF 
+         000df6 FFB4 
+         000df7 0300 
+ A   396 000df8 0044          .word    0044H, 0FFFFH, 0FFB2H, 05800H
+         000df9 FFFF 
+         000dfa FFB2 
+         000dfb 5800 
+ A   397 000dfc 0045          .word    0045H, 0FFFFH, 0FFDAH, 05200H
+         000dfd FFFF 
+         000dfe FFDA 
+         000dff 5200 
+ A   398 000e00 0046          .word    0046H, 00000H, 0001AH, 01E00H
+         000e01 0000 
+         000e02 001A 
+         000e03 1E00 
+ A   399 000e04 0047          .word    0047H, 00000H, 00051H, 08200H
+         000e05 0000 
+         000e06 0051 
+         000e07 8200 
+ A   400 000e08 0048          .word    0048H, 00000H, 00061H, 0F300H
+         000e09 0000 
+         000e0a 0061 
+         000e0b F300 
+ A   401 000e0c 0049          .word    0049H, 00000H, 0003EH, 0FB00H
+         000e0d 0000 
+         000e0e 003E 
+         000e0f FB00 
+ A   402 000e10 004A          .word    004AH, 0FFFFH, 0FFF6H, 09A00H
+         000e11 FFFF 
+         000e12 FFF6 
+         000e13 9A00 
+ A   403 000e14 004B          .word    004BH, 0FFFFH, 0FFACH, 03B00H
+         000e15 FFFF 
+         000e16 FFAC 
+         000e17 3B00 
+ A   404 000e18 004C          .word    004CH, 0FFFFH, 0FF87H, 0CD00H
+         000e19 FFFF 
+         000e1a FF87 
+         000e1b CD00 
+ A   405 000e1c 004D          .word    004DH, 0FFFFH, 0FFA0H, 0E000H
+         000e1d FFFF 
+         000e1e FFA0 
+         000e1f E000 
+ A   406 000e20 004E          .word    004EH, 0FFFFH, 0FFF0H, 06C00H
+         000e21 FFFF 
+         000e22 FFF0 
+         000e23 6C00 
+ A   407 000e24 004F          .word    004FH, 00000H, 00051H, 05000H
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   15
+
+         000e25 0000 
+         000e26 0051 
+         000e27 5000 
+ A   408 000e28 0050          .word    0050H, 00000H, 00091H, 00000H
+         000e29 0000 
+         000e2a 0091 
+         000e2b 0000 
+ A   409 000e2c 0051          .word    0051H, 00000H, 00089H, 00300H
+         000e2d 0000 
+         000e2e 0089 
+         000e2f 0300 
+ A   410 000e30 0052          .word    0052H, 00000H, 00034H, 0D300H
+         000e31 0000 
+         000e32 0034 
+         000e33 D300 
+ A   411 000e34 0053          .word    0053H, 0FFFFH, 0FFB8H, 07000H
+         000e35 FFFF 
+         000e36 FFB8 
+         000e37 7000 
+ A   412 000e38 0054          .word    0054H, 0FFFFH, 0FF52H, 03500H
+         000e39 FFFF 
+         000e3a FF52 
+         000e3b 3500 
+ A   413 000e3c 0055          .word    0055H, 0FFFFH, 0FF3DH, 02500H
+         000e3d FFFF 
+         000e3e FF3D 
+         000e3f 2500 
+ A   414 000e40 0056          .word    0056H, 0FFFFH, 0FF91H, 02300H
+         000e41 FFFF 
+         000e42 FF91 
+         000e43 2300 
+ A   415 000e44 0057          .word    0057H, 00000H, 00031H, 02B00H
+         000e45 0000 
+         000e46 0031 
+         000e47 2B00 
+ A   416 000e48 0058          .word    0058H, 00000H, 000D2H, 08F00H
+         000e49 0000 
+         000e4a 00D2 
+         000e4b 8F00 
+ A   417 000e4c 0059          .word    0059H, 00000H, 0011CH, 0AC00H
+         000e4d 0000 
+         000e4e 011C 
+         000e4f AC00 
+ A   418 000e50 005A          .word    005AH, 00000H, 000D4H, 0AD00H
+         000e51 0000 
+         000e52 00D4 
+         000e53 AD00 
+ A   419 000e54 005B          .word    005BH, 00000H, 00001H, 05100H
+         000e55 0000 
+         000e56 0001 
+         000e57 5100 
+ A   420 000e58 005C          .word    005CH, 0FFFFH, 0FEF4H, 09300H
+         000e59 FFFF 
+         000e5a FEF4 
+         000e5b 9300 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   16
+
+ A   421 000e5c 005D          .word    005DH, 0FFFFH, 0FE33H, 01500H
+         000e5d FFFF 
+         000e5e FE33 
+         000e5f 1500 
+ A   422 000e60 005E          .word    005EH, 0FFFFH, 0FE40H, 0D400H
+         000e61 FFFF 
+         000e62 FE40 
+         000e63 D400 
+ A   423 000e64 005F          .word    005FH, 0FFFFH, 0FF66H, 0CA00H
+         000e65 FFFF 
+         000e66 FF66 
+         000e67 CA00 
+ A   424 000e68 0060          .word    0060H, 00000H, 0018BH, 03F00H
+         000e69 0000 
+         000e6a 018B 
+         000e6b 3F00 
+ A   425 000e6c 0061          .word    0061H, 00000H, 0042FH, 00200H
+         000e6d 0000 
+         000e6e 042F 
+         000e6f 0200 
+ A   426 000e70 0062          .word    0062H, 00000H, 00694H, 01D00H
+         000e71 0000 
+         000e72 0694 
+         000e73 1D00 
+ A   427 000e74 0063          .word    0063H, 00000H, 007FFH, 0FF00H
+         000e75 0000 
+         000e76 07FF 
+         000e77 FF00 
+ A   428 000e78 0064          .word    0064H, 00000H, 007FFH, 0FF00H
+         000e79 0000 
+         000e7a 07FF 
+         000e7b FF00 
+ A   429 000e7c 0065          .word    0065H, 00000H, 00694H, 01D00H
+         000e7d 0000 
+         000e7e 0694 
+         000e7f 1D00 
+ A   430 000e80 0066          .word    0066H, 00000H, 0042FH, 00200H
+         000e81 0000 
+         000e82 042F 
+         000e83 0200 
+ A   431 000e84 0067          .word    0067H, 00000H, 0018BH, 03F00H
+         000e85 0000 
+         000e86 018B 
+         000e87 3F00 
+ A   432 000e88 0068          .word    0068H, 0FFFFH, 0FF66H, 0CA00H
+         000e89 FFFF 
+         000e8a FF66 
+         000e8b CA00 
+ A   433 000e8c 0069          .word    0069H, 0FFFFH, 0FE40H, 0D400H
+         000e8d FFFF 
+         000e8e FE40 
+         000e8f D400 
+ A   434 000e90 006A          .word    006AH, 0FFFFH, 0FE33H, 01500H
+         000e91 FFFF 
+         000e92 FE33 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   17
+
+         000e93 1500 
+ A   435 000e94 006B          .word    006BH, 0FFFFH, 0FEF4H, 09300H
+         000e95 FFFF 
+         000e96 FEF4 
+         000e97 9300 
+ A   436 000e98 006C          .word    006CH, 00000H, 00001H, 05100H
+         000e99 0000 
+         000e9a 0001 
+         000e9b 5100 
+ A   437 000e9c 006D          .word    006DH, 00000H, 000D4H, 0AD00H
+         000e9d 0000 
+         000e9e 00D4 
+         000e9f AD00 
+ A   438 000ea0 006E          .word    006EH, 00000H, 0011CH, 0AC00H
+         000ea1 0000 
+         000ea2 011C 
+         000ea3 AC00 
+ A   439 000ea4 006F          .word    006FH, 00000H, 000D2H, 08F00H
+         000ea5 0000 
+         000ea6 00D2 
+         000ea7 8F00 
+ A   440 000ea8 0070          .word    0070H, 00000H, 00031H, 02B00H
+         000ea9 0000 
+         000eaa 0031 
+         000eab 2B00 
+ A   441 000eac 0071          .word    0071H, 0FFFFH, 0FF91H, 02300H
+         000ead FFFF 
+         000eae FF91 
+         000eaf 2300 
+ A   442 000eb0 0072          .word    0072H, 0FFFFH, 0FF3DH, 02500H
+         000eb1 FFFF 
+         000eb2 FF3D 
+         000eb3 2500 
+ A   443 000eb4 0073          .word    0073H, 0FFFFH, 0FF52H, 03500H
+         000eb5 FFFF 
+         000eb6 FF52 
+         000eb7 3500 
+ A   444 000eb8 0074          .word    0074H, 0FFFFH, 0FFB8H, 07000H
+         000eb9 FFFF 
+         000eba FFB8 
+         000ebb 7000 
+ A   445 000ebc 0075          .word    0075H, 00000H, 00034H, 0D300H
+         000ebd 0000 
+         000ebe 0034 
+         000ebf D300 
+ A   446 000ec0 0076          .word    0076H, 00000H, 00089H, 00300H
+         000ec1 0000 
+         000ec2 0089 
+         000ec3 0300 
+ A   447 000ec4 0077          .word    0077H, 00000H, 00091H, 00000H
+         000ec5 0000 
+         000ec6 0091 
+         000ec7 0000 
+ A   448 000ec8 0078          .word    0078H, 00000H, 00051H, 05000H
+         000ec9 0000 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   18
+
+         000eca 0051 
+         000ecb 5000 
+ A   449 000ecc 0079          .word    0079H, 0FFFFH, 0FFF0H, 06C00H
+         000ecd FFFF 
+         000ece FFF0 
+         000ecf 6C00 
+ A   450 000ed0 007A          .word    007AH, 0FFFFH, 0FFA0H, 0E000H
+         000ed1 FFFF 
+         000ed2 FFA0 
+         000ed3 E000 
+ A   451 000ed4 007B          .word    007BH, 0FFFFH, 0FF87H, 0CD00H
+         000ed5 FFFF 
+         000ed6 FF87 
+         000ed7 CD00 
+ A   452 000ed8 007C          .word    007CH, 0FFFFH, 0FFACH, 03B00H
+         000ed9 FFFF 
+         000eda FFAC 
+         000edb 3B00 
+ A   453 000edc 007D          .word    007DH, 0FFFFH, 0FFF6H, 09A00H
+         000edd FFFF 
+         000ede FFF6 
+         000edf 9A00 
+ A   454 000ee0 007E          .word    007EH, 00000H, 0003EH, 0FB00H
+         000ee1 0000 
+         000ee2 003E 
+         000ee3 FB00 
+ A   455 000ee4 007F          .word    007FH, 00000H, 00061H, 0F300H
+         000ee5 0000 
+         000ee6 0061 
+         000ee7 F300 
+ A   456 000ee8 0080          .word    0080H, 00000H, 00051H, 08200H
+         000ee9 0000 
+         000eea 0051 
+         000eeb 8200 
+ A   457 000eec 0081          .word    0081H, 00000H, 0001AH, 01E00H
+         000eed 0000 
+         000eee 001A 
+         000eef 1E00 
+ A   458 000ef0 0082          .word    0082H, 0FFFFH, 0FFDAH, 05200H
+         000ef1 FFFF 
+         000ef2 FFDA 
+         000ef3 5200 
+ A   459 000ef4 0083          .word    0083H, 0FFFFH, 0FFB2H, 05800H
+         000ef5 FFFF 
+         000ef6 FFB2 
+         000ef7 5800 
+ A   460 000ef8 0084          .word    0084H, 0FFFFH, 0FFB4H, 00300H
+         000ef9 FFFF 
+         000efa FFB4 
+         000efb 0300 
+ A   461 000efc 0085          .word    0085H, 0FFFFH, 0FFDBH, 04800H
+         000efd FFFF 
+         000efe FFDB 
+         000eff 4800 
+ A   462 000f00 0086          .word    0086H, 00000H, 00011H, 0BE00H
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   19
+
+         000f01 0000 
+         000f02 0011 
+         000f03 BE00 
+ A   463 000f04 0087          .word    0087H, 00000H, 0003BH, 04A00H
+         000f05 0000 
+         000f06 003B 
+         000f07 4A00 
+ A   464 000f08 0088          .word    0088H, 00000H, 00044H, 04200H
+         000f09 0000 
+         000f0a 0044 
+         000f0b 4200 
+ A   465 000f0c 0089          .word    0089H, 00000H, 0002AH, 0A700H
+         000f0d 0000 
+         000f0e 002A 
+         000f0f A700 
+ A   466 000f10 008A          .word    008AH, 0FFFFH, 0FFFDH, 0B900H
+         000f11 FFFF 
+         000f12 FFFD 
+         000f13 B900 
+ A   467 000f14 008B          .word    008BH, 0FFFFH, 0FFD5H, 02F00H
+         000f15 FFFF 
+         000f16 FFD5 
+         000f17 2F00 
+ A   468 000f18 008C          .word    008CH, 0FFFFH, 0FFC4H, 0DB00H
+         000f19 FFFF 
+         000f1a FFC4 
+         000f1b DB00 
+ A   469 000f1c 008D          .word    008DH, 0FFFFH, 0FFD3H, 01A00H
+         000f1d FFFF 
+         000f1e FFD3 
+         000f1f 1A00 
+ A   470 000f20 008E          .word    008EH, 0FFFFH, 0FFF6H, 0AA00H
+         000f21 FFFF 
+         000f22 FFF6 
+         000f23 AA00 
+ A   471 000f24 008F          .word    008FH, 00000H, 0001CH, 06100H
+         000f25 0000 
+         000f26 001C 
+         000f27 6100 
+ A   472 000f28 0090          .word    0090H, 00000H, 00031H, 05000H
+         000f29 0000 
+         000f2a 0031 
+         000f2b 5000 
+ A   473 000f2c 0091          .word    0091H, 00000H, 0002CH, 04A00H
+         000f2d 0000 
+         000f2e 002C 
+         000f2f 4A00 
+ A   474 000f30 0092          .word    0092H, 00000H, 00011H, 09100H
+         000f31 0000 
+         000f32 0011 
+         000f33 9100 
+ A   475 000f34 0093          .word    0093H, 0FFFFH, 0FFEFH, 0F900H
+         000f35 FFFF 
+         000f36 FFEF 
+         000f37 F900 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   20
+
+ A   476 000f38 0094          .word    0094H, 0FFFFH, 0FFD8H, 0A600H
+         000f39 FFFF 
+         000f3a FFD8 
+         000f3b A600 
+ A   477 000f3c 0095          .word    0095H, 0FFFFH, 0FFD6H, 08400H
+         000f3d FFFF 
+         000f3e FFD6 
+         000f3f 8400 
+ A   478 000f40 0096          .word    0096H, 0FFFFH, 0FFE9H, 02400H
+         000f41 FFFF 
+         000f42 FFE9 
+         000f43 2400 
+ A   479 000f44 0097          .word    0097H, 00000H, 00005H, 0DF00H
+         000f45 0000 
+         000f46 0005 
+         000f47 DF00 
+ A   480 000f48 0098          .word    0098H, 00000H, 0001DH, 0B100H
+         000f49 0000 
+         000f4a 001D 
+         000f4b B100 
+ A   481 000f4c 0099          .word    0099H, 00000H, 00025H, 02700H
+         000f4d 0000 
+         000f4e 0025 
+         000f4f 2700 
+ A   482 000f50 009A          .word    009AH, 00000H, 00019H, 0A200H
+         000f51 0000 
+         000f52 0019 
+         000f53 A200 
+ A   483 000f54 009B          .word    009BH, 00000H, 00002H, 02E00H
+         000f55 0000 
+         000f56 0002 
+         000f57 2E00 
+ A   484 000f58 009C          .word    009CH, 0FFFFH, 0FFEBH, 03A00H
+         000f59 FFFF 
+         000f5a FFEB 
+         000f5b 3A00 
+ A   485 000f5c 009D          .word    009DH, 0FFFFH, 0FFE0H, 03100H
+         000f5d FFFF 
+         000f5e FFE0 
+         000f5f 3100 
+ A   486 000f60 009E          .word    009EH, 0FFFFH, 0FFE5H, 0A500H
+         000f61 FFFF 
+         000f62 FFE5 
+         000f63 A500 
+ A   487 000f64 009F          .word    009FH, 0FFFFH, 0FFF7H, 0DA00H
+         000f65 FFFF 
+         000f66 FFF7 
+         000f67 DA00 
+ A   488 000f68 00A0          .word    00A0H, 00000H, 0000CH, 0D100H
+         000f69 0000 
+         000f6a 000C 
+         000f6b D100 
+ A   489 000f6c 00A1          .word    00A1H, 00000H, 0001AH, 00500H
+         000f6d 0000 
+         000f6e 001A 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   21
+
+         000f6f 0500 
+ A   490 000f70 00A2          .word    00A2H, 00000H, 00019H, 06500H
+         000f71 0000 
+         000f72 0019 
+         000f73 6500 
+ A   491 000f74 00A3          .word    00A3H, 00000H, 0000CH, 04100H
+         000f75 0000 
+         000f76 000C 
+         000f77 4100 
+ A   492 000f78 00A4          .word    00A4H, 0FFFFH, 0FFF9H, 0E700H
+         000f79 FFFF 
+         000f7a FFF9 
+         000f7b E700 
+ A   493 000f7c 00A5          .word    00A5H, 0FFFFH, 0FFEBH, 0E200H
+         000f7d FFFF 
+         000f7e FFEB 
+         000f7f E200 
+ A   494 000f80 00A6          .word    00A6H, 0FFFFH, 0FFE8H, 0BD00H
+         000f81 FFFF 
+         000f82 FFE8 
+         000f83 BD00 
+ A   495 000f84 00A7          .word    00A7H, 0FFFFH, 0FFF1H, 06300H
+         000f85 FFFF 
+         000f86 FFF1 
+         000f87 6300 
+ A   496 000f88 00A8          .word    00A8H, 00000H, 00000H, 09C00H
+         000f89 0000 
+         000f8a 0000 
+         000f8b 9C00 
+ A   497 000f8c 00A9          .word    00A9H, 00000H, 0000EH, 09500H
+         000f8d 0000 
+         000f8e 000E 
+         000f8f 9500 
+ A   498 000f90 00AA          .word    00AAH, 00000H, 00014H, 04F00H
+         000f91 0000 
+         000f92 0014 
+         000f93 4F00 
+ A   499 000f94 00AB          .word    00ABH, 00000H, 0000FH, 0A800H
+         000f95 0000 
+         000f96 000F 
+         000f97 A800 
+ A   500 000f98 00AC          .word    00ACH, 00000H, 00003H, 07F00H
+         000f99 0000 
+         000f9a 0003 
+         000f9b 7F00 
+ A   501 000f9c 00AD          .word    00ADH, 0FFFFH, 0FFF6H, 07D00H
+         000f9d FFFF 
+         000f9e FFF6 
+         000f9f 7D00 
+ A   502 000fa0 00AE          .word    00AEH, 0FFFFH, 0FFEEH, 0F300H
+         000fa1 FFFF 
+         000fa2 FFEE 
+         000fa3 F300 
+ A   503 000fa4 00AF          .word    00AFH, 0FFFFH, 0FFF0H, 07500H
+         000fa5 FFFF 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   22
+
+         000fa6 FFF0 
+         000fa7 7500 
+ A   504 000fa8 00B0          .word    00B0H, 0FFFFH, 0FFF9H, 07900H
+         000fa9 FFFF 
+         000faa FFF9 
+         000fab 7900 
+ A   505 000fac 00B1          .word    00B1H, 00000H, 00005H, 05300H
+         000fad 0000 
+         000fae 0005 
+         000faf 5300 
+ A   506 000fb0 00B2          .word    00B2H, 00000H, 0000DH, 0B300H
+         000fb1 0000 
+         000fb2 000D 
+         000fb3 B300 
+ A   507 000fb4 00B3          .word    00B3H, 00000H, 0000EH, 0F700H
+         000fb5 0000 
+         000fb6 000E 
+         000fb7 F700 
+ A   508 000fb8 00B4          .word    00B4H, 00000H, 00008H, 08100H
+         000fb9 0000 
+         000fba 0008 
+         000fbb 8100 
+ A   509 000fbc 00B5          .word    00B5H, 0FFFFH, 0FFFEH, 04900H
+         000fbd FFFF 
+         000fbe FFFE 
+         000fbf 4900 
+ A   510 000fc0 00B6          .word    00B6H, 0FFFFH, 0FFF5H, 01800H
+         000fc1 FFFF 
+         000fc2 FFF5 
+         000fc3 1800 
+ A   511 000fc4 00B7          .word    00B7H, 0FFFFH, 0FFF1H, 0E200H
+         000fc5 FFFF 
+         000fc6 FFF1 
+         000fc7 E200 
+ A   512 000fc8 00B8          .word    00B8H, 0FFFFH, 0FFF5H, 08A00H
+         000fc9 FFFF 
+         000fca FFF5 
+         000fcb 8A00 
+ A   513 000fcc 00B9          .word    00B9H, 0FFFFH, 0FFFEH, 0C000H
+         000fcd FFFF 
+         000fce FFFE 
+         000fcf C000 
+ A   514 000fd0 00BA          .word    00BAH, 00000H, 00008H, 03B00H
+         000fd1 0000 
+         000fd2 0008 
+         000fd3 3B00 
+ A   515 000fd4 00BB          .word    00BBH, 00000H, 0000EH, 03B00H
+         000fd5 0000 
+         000fd6 000E 
+         000fd7 3B00 
+ A   516 000fd8 00BC          .word    00BCH, 00000H, 0000CH, 0B000H
+         000fd9 0000 
+         000fda 000C 
+         000fdb B000 
+ A   517 000fdc 00BD          .word    00BDH, 00000H, 00005H, 00900H
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   23
+
+         000fdd 0000 
+         000fde 0005 
+         000fdf 0900 
+ A   518 000fe0 00BE          .word    00BEH, 0FFFFH, 0FFF8H, 08600H
+         000fe1 FFFF 
+         000fe2 FFF8 
+         000fe3 8600 
+ A   519 000fe4 00BF          .word    00BFH, 0FFFFH, 0FFEDH, 04C00H  
+         000fe5 FFFF 
+         000fe6 FFED 
+         000fe7 4C00 
+ A   520 000fe8 00C0          .word    00C0H, 0FFFFH, 0FFE4H, 0C300H  
+         000fe9 FFFF 
+         000fea FFE4 
+         000feb C300 
+ A   521 000fec 00C1          .word    00C1H, 0FFFFH, 0FFE3H, 0FA00H  
+         000fed FFFF 
+         000fee FFE3 
+         000fef FA00 
+ A   522 000ff0 00C2          .word    00C2H, 0FFFFH, 0FFE6H, 09B00H  
+         000ff1 FFFF 
+         000ff2 FFE6 
+         000ff3 9B00 
+ A   523 000ff4 00C3          .word    00C3H, 0FFFFH, 0FFEFH, 0D500H  
+         000ff5 FFFF 
+         000ff6 FFEF 
+         000ff7 D500 
+ A   524 000ff8 00C4          .word    00C4H, 0FFFFH, 0FFF5H, 08F00H  
+         000ff9 FFFF 
+         000ffa FFF5 
+         000ffb 8F00 
+ A   525 000ffc 00C5          .word    00C5H, 0FFFFH, 0FFFFH, 09900H  
+         000ffd FFFF 
+         000ffe FFFF 
+         000fff 9900 
+ A   526 001000 00C6          .word    00C6H, 0FFFFH, 0FFFEH, 03C00H  
+         001001 FFFF 
+         001002 FFFE 
+         001003 3C00 
+ A   527 001004 00C7          .word    00C7H, 00000H, 00005H, 0D300H  ; End RCF Filter Coefficients        
+         001005 0000 
+         001006 0005 
+         001007 D300 
+ A   528 001008 FFFF          .word    0FFFFH ; End of Table
+ A   529 001009       ad6620_filter_end:
+ A   530              
+ A   531 001009       ad6620_soft_reset:
+ A   532 001009 0300          .word    0300H, 00000H, 00000H, 00100H  ; Soft Reset (same for M & S)
+         00100a 0000 
+         00100b 0000 
+         00100c 0100 
+ A   533 00100d FFFF          .word    0FFFFH ; End of Table
+ A   534 00100e       ad6620_soft_reset_end:
+ A   535              
+ A   536 00100e       ad6620_master_run:
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   24
+
+ A   537 00100e 0300          .word    0300H, 00000H, 00000H, 00800H  ; Run: end of soft reset, Master
+         00100f 0000 
+         001010 0000 
+         001011 0800 
+ A   538 001012 FFFF          .word    0FFFFH ; End of Table
+ A   539 001013       ad6620_master_run_end:
+ A   540              
+ A   541 001013       ad6620_slave_run:
+ A   542 001013 0300          .word    0300h, 00000h, 00000h, 00000h  ; Run: end of soft reset, Slave
+         001014 0000 
+         001015 0000 
+         001016 0000 
+ A   543 001017 FFFF          .word    0FFFFH ; End of Table
+ A   544 001018       ad6620_slave_run_end:
+ A   545              
+ A   546              ;
+ A   547              ; NCO control "short tables"- use with ad6620_setup
+ A   548              ;
+ A   549 001018       NCO_500_kHz:
+ A   550 001018 0303                  .word    0x303, 0x0001, 0xeb85, 0x3f00
+         001019 0001 
+         00101a EB85 
+         00101b 3F00 
+ A   551 00101c FFFF                  .word    0FFFFh
+ A   552 00101d       NCO_1000_kHz:
+ A   553 00101d 0303          .word    0303h, 0003h, 0D70Ah, 7E00h    ; NCO Frequency = 1 MHz
+         00101e 0003 
+         00101f D70A 
+         001020 7E00 
+ A   554 001021 FFFF          .word    0FFFFh
+ A   555 001022       NCO_2750_kHz:
+ A   556 001022 0303          .word    0303h, 0000Ah, 08F5Ch, 0DA00h  ; NCO Frequency = 2.75 MHz
+         001023 000A 
+         001024 8F5C 
+         001025 DA00 
+ A   557 001026 FFFF          .word    0FFFFh
+ A   558 001027       NCO_250_kHz:
+ A   559 001027 0303          .word    0303h, 00000h, 0F5C2h, 09F00h  ; NCO Frequency = 250 kHz
+         001028 0000 
+         001029 F5C2 
+         00102a 9F00 
+ A   560 00102b FFFF          .word    0FFFFh
+ A   561 00102c       NCO_2670_kHz:
+ A   562 00102c 0303          .word    0303h, 0000Ah, 040B8h, 02C00h  ; NCO Frequency = 2.67 MHz
+         00102d 000A 
+         00102e 40B8 
+         00102f 2C00 
+ A   563 001030 FFFF          .word    0FFFFh       
+ A   564 001031       NCO_1450_kHz:
+ A   565 001031 0303          .word    0303h, 00005h, 09168h, 0D000h  ; NCO Frequency = 1.45 MHz
+         001032 0005 
+         001033 9168 
+         001034 D000 
+ A   566 001035 FFFF          .word    0FFFFh       
+ A   567 001036       NCO_515_kHz:
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   25
+
+ A   568 001036 0303          .word    0303h, 00001h, 0FA44h, 02000h  ; NCO Frequency = 515 kHz
+         001037 0001 
+         001038 FA44 
+         001039 2000 
+ A   569 00103a FFFF          .word    0FFFFh       
+ A   570              
+ A   571                      .end
+
+No Assembly Errors, No Assembly Warnings
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   26
+
+LABEL                                VALUE       DEFN    REF
+
+.TMS320C540                         000000          0 
+.TMS320C541                         000000          0 
+.TMS320C541A                        000000          0 
+.TMS320C542                         000001          0 
+.TMS320C543                         000000          0 
+.TMS320C544                         000000          0 
+.TMS320C545                         000000          0 
+.TMS320C545LP                       000000          0 
+.TMS320C546                         000000          0 
+.TMS320C546LP                       000000          0 
+.TMS320C548                         000000          0 
+.TMS320C549                         000000          0 
+CR                                  00000d      B 130 
+CRLF                                000d0a      B 132 
+ESC                                 00001b      B 133 
+LF                                  00000a      B 131 
+NCO_1000_kHz                        00101d+     A 552 
+NCO_1450_kHz                        001031+     A 564 
+NCO_250_kHz                         001027+     A 558 
+NCO_2670_kHz                        00102c+     A 561 
+NCO_2750_kHz                        001022+     A 555 
+NCO_500_kHz                         001018+     A 549 
+NCO_515_kHz                         001036+     A 567 
+__TI_ASSEMBLER_VERSION__            3d10d0          0 
+__far_mode                          000000          0 
+__lflags                            000000          0 
+__no_fret                           000000          0 
+__stores_bug                        000000          0 
+acq_seq_in                          000002      B 161 
+acq_seq_len                         007fff      B 143 
+acq_seq_out                         000080      B 156 
+acq_test2                           000004      B 151 
+acq_test3                           000008      B 152 
+acq_test4                           000010      B 153 
+acq_test5                           000020      B 154 
+acq_test6                           000040      B 155 
+ad6620_filter                       000cb4+     A 310  A  30 
+ad6620_filter_end                   001009+     A 529 
+ad6620_master_run                   00100e+     A 536  A  38 
+ad6620_master_run_end               001013+     A 539 
+ad6620_msg1                         000c98+     A 263 
+ad6620_msg2                         000ca6+     A 268 
+ad6620_slave_run                    001013+     A 541  A  46 
+ad6620_slave_run_end                001018+     A 544 
+ad6620_soft_reset                   001009+     A 531  A  22 
+ad6620_soft_reset_end               00100e+     A 534 
+amr                                 000007      B 116  A  62  A 170 
+bspc_Free                           008000      B 198 
+bspc_RSRfull                        002000      B 196 
+bspc_Rrdy                           000400      B 193 
+bspc_Soft                           004000      B 197 
+bspc_XSRfull                        001000      B 195 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   27
+
+LABEL                                VALUE       DEFN    REF
+
+bspc_Xrdy                           000800      B 194 
+bspc_dlb                            000002      B 184 
+bspc_fo                             000004      B 185 
+bspc_fsm                            000008      B 186 
+bspc_in0                            000100      B 191 
+bspc_in1                            000200      B 192 
+bspc_mcm                            000010      B 187 
+bspc_nRrst                          000080      B 190 
+bspc_nXrst                          000040      B 189 
+bspc_txm                            000020      B 188 
+bspce_bre                           002000      B 211 
+bspce_bxe                           000400      B 208 
+bspce_clkp                          000040      B 204 
+bspce_fe                            000080      B 205 
+bspce_fig                           000100      B 206 
+bspce_fsp                           000020      B 203 
+bspce_haltr                         008000      B 213 
+bspce_haltx                         001000      B 210 
+bspce_pcm                           000200      B 207 
+bspce_rh                            004000      B 212 
+bspce_xh                            000800      B 209 
+clk_rx_out                          002000      B  56 
+defst0                              001800      B  14 
+defst1                              002900      B  21 
+disc_0                              000001      B 160 
+dr0                                 000000      B 109  A  77  A 221 
+dr1                                 000001      B 110  A  76  A 210 
+dr2                                 000002      B 111  A  75  A 205 
+dr3                                 000003      B 112  A  74  A 193 
+dr4                                 000004      B 113  A  73  A 188 
+int_0                               000001      B  95 
+int_1                               000002      B  96 
+int_2                               000004      B  97 
+int_3                               000100      B 103 
+int_br                              000010      B  99 
+int_bx                              000020      B 100 
+int_t                               000008      B  98 
+int_tr                              000040      B 101 
+int_tx                              000080      B 102 
+iq_len                              00003f      B 142 
+lar                                 000006      B 115  A  66  A 176 
+lsb_sel                             000002      B 150 
+master_header                       000c71+     A 246 
+nload                               000020      B  88 
+npmst                               0000a3      B   4 
+nprd                                00095f      B  89 
+ntddr                               000000      B  86 
+ntss                                000010      B  85 
+nwait                               00063f      B  90 
+par_tm_en                           000001      B 149 
+prom                                008000      B  35 
+rd_disc                             008000      B  59 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   28
+
+LABEL                                VALUE       DEFN    REF
+
+rd_out2                             006000      B  58 
+rd_rsv                              00e000      B  62 
+rd_rx                               004000      B  57 
+rd_rx_out                           000000      B  55 
+rs_fifo                             00c000      B  61 
+rs_rx_fifo                          00a000      B  60 
+rsp_clear                           000c1c+     A  58  A  11 
+rsp_clear_loop                      000c39+     A  80  A  71 
+rsp_init                            000c07+     A  29  A  11 
+rsp_loop                            000c3f+     A 150  A 230 
+rsp_mstart                          000c0e+     A  37  A  11 
+rsp_reset                           000c00+     A  21  A  11 
+rsp_setup                           000c3c+     A 143  A  23  A  31  A  39  A  47 
+rsp_sstart                          000c15+     A  45  A  11 
+rspx                                000c70+     A 231  A 157 
+rsv                                 000005      B 114 
+rx_efo                              000040      B 166 
+rx_ffo                              000020      B 165 
+rx_hfo                              000080      B 167 
+scratch                             000060      B  36 
+seq_len                             00ffff      B 144 
+slave_header                        000c82+     A 250 
+stack                               00013f      B  37 
+static_minor_footer                 000c93+     A 256 
+swwsr_ds0                           000006      B  73 
+swwsr_ds1                           000009      B  74 
+swwsr_is                            00000c      B  75 
+swwsr_ps0                           000000      B  71 
+swwsr_ps1                           000003      B  72 
+table_end                           00ffff      A 141  A 156 
+test_28                             000002      B 126 
+tlm_efo                             000008      B 163 
+tlm_ffo                             000004      B 162 
+tlm_hfo                             000010      B 164 
+trm_28                              000001      B 125 
+tspc_Free                           008000      B 180 
+tspc_Rrdy                           000400      B 177 
+tspc_Soft                           004000      B 179 
+tspc_Xrdy                           000800      B 178 
+tspc_in0                            000100      B 175 
+tspc_in1                            000200      B 176 
+tspc_mcm                            000010      B 171 
+tspc_nRrst                          000080      B 174 
+tspc_nXrst                          000040      B 173 
+tspc_txm                            000020      B 172 
+wr_disc                             008000      B  48 
+wr_dog                              00a000      B  49 
+wr_out                              00c000      B  50 
+wr_out0                             002000      B  44 
+wr_out1                             004000      B  45 
+wr_rd_fifo                          006000      B  47 
+wr_rs_rx                            000000      B  43 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:36 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+ad6620.abs                                                           PAGE   29
+
+LABEL                                VALUE       DEFN    REF
+
+wr_rsv                              00e000      B  51 
+wr_rx                               004000      B  46  A  62  A  66  A  73  A  74 
+                                                       A  75  A  76  A  77  A 170 
+                                                       A 176  A 188  A 193  A 205 
+                                                       A 210  A 221 

@@ -1,0 +1,195 @@
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 16:42:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+tabletransfer.abs                                                    PAGE    1
+
+      69 000000                 .text
+      70                        .copy       "tabletransfer.asm"
+ A     1              
+ A     2                      .mmregs
+ A     3                      .def transfer, transfer_table_sz
+ A     4 00199e               .sect .transfer_p
+ A     5              
+ A     6 00199e       transfer:
+ A     7              
+ A     8 00199e 4A06          pshm    ST0
+ A     9 00199f 4A07          pshm    ST1
+ A    10 0019a0 4A16          pshm    AR6
+ A    11              
+ A    12 0019a1 8812          stlm    A, AR2
+ A    13 0019a2 8913          stlm    B, AR3
+ A    14 0019a3 771A          stm             #transfer_table_sz - 1, BRC
+         0019a4 0067 
+ A    15 0019a5 7716          stm             transfer_table_start, AR6       ;load the start of the table into memory
+         0019a6 19B2+
+ A    16                      
+ A    17 0019a7 F072          rptb    transfer_loop - 1
+         0019a8 19AB+
+ A    18                      
+ A    19 0019a9 1012          ld              AR2, A  ;load the data address into AR7
+ A    20 0019aa 0096          add             *AR6+, A                ;increment AR7 to the next relevant fft point
+ A    21 0019ab 7E93          reada   *AR3+                   ;or whatever the current serial transfer is
+ A    22              
+ A    23 0019ac       transfer_loop:
+ A    24              
+ A    25 0019ac 8A16          popm    AR6
+ A    26 0019ad 8A07          popm    ST1
+ A    27 0019ae 8A06          popm    ST0
+ A    28                              
+ A    29 0019af FE00          retd
+ A    30 0019b0 F495          nop
+ A    31 0019b1 F495          nop
+ A    32                      
+ A    33              
+ A    34 0019b2       transfer_table_start:
+ A    35 0019b2 0019          .word   25, 33, 41, 49, 57, 65, 73, 81, 89, 97, 105
+         0019b3 0021 
+         0019b4 0029 
+         0019b5 0031 
+         0019b6 0039 
+         0019b7 0041 
+         0019b8 0049 
+         0019b9 0051 
+         0019ba 0059 
+         0019bb 0061 
+         0019bc 0069 
+ A    36              
+ A    37 0019bd 0071          .word   113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130 
+         0019be 0072 
+         0019bf 0073 
+         0019c0 0074 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 16:42:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+tabletransfer.abs                                                    PAGE    2
+
+         0019c1 0075 
+         0019c2 0076 
+         0019c3 0077 
+         0019c4 0078 
+         0019c5 0079 
+         0019c6 007A 
+         0019c7 007B 
+         0019c8 007C 
+         0019c9 007D 
+         0019ca 007E 
+         0019cb 007F 
+         0019cc 0080 
+         0019cd 0081 
+         0019ce 0082 
+ A    38 0019cf 0083          .word   131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148
+         0019d0 0084 
+         0019d1 0085 
+         0019d2 0086 
+         0019d3 0087 
+         0019d4 0088 
+         0019d5 0089 
+         0019d6 008A 
+         0019d7 008B 
+         0019d8 008C 
+         0019d9 008D 
+         0019da 008E 
+         0019db 008F 
+         0019dc 0090 
+         0019dd 0091 
+         0019de 0092 
+         0019df 0093 
+         0019e0 0094 
+ A    39 0019e1 0095          .word   149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165
+         0019e2 0096 
+         0019e3 0097 
+         0019e4 0098 
+         0019e5 0099 
+         0019e6 009A 
+         0019e7 009B 
+         0019e8 009C 
+         0019e9 009D 
+         0019ea 009E 
+         0019eb 009F 
+         0019ec 00A0 
+         0019ed 00A1 
+         0019ee 00A2 
+         0019ef 00A3 
+         0019f0 00A4 
+         0019f1 00A5 
+ A    40              
+ A    41 0019f2 00A6          .word   166, 174, 182, 190, 198, 206, 214, 222, 230, 238, 246, 254, 262, 270, 278, 286, 294, 302 
+         0019f3 00AE 
+         0019f4 00B6 
+         0019f5 00BE 
+         0019f6 00C6 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 16:42:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+tabletransfer.abs                                                    PAGE    3
+
+         0019f7 00CE 
+         0019f8 00D6 
+         0019f9 00DE 
+         0019fa 00E6 
+         0019fb 00EE 
+         0019fc 00F6 
+         0019fd 00FE 
+         0019fe 0106 
+         0019ff 010E 
+         001a00 0116 
+         001a01 011E 
+         001a02 0126 
+         001a03 012E 
+ A    42 001a04 0136          .word   310, 318, 326, 334, 342, 350, 358, 366, 374, 382, 390, 398, 406, 414, 422, 430, 438, 446
+         001a05 013E 
+         001a06 0146 
+         001a07 014E 
+         001a08 0156 
+         001a09 015E 
+         001a0a 0166 
+         001a0b 016E 
+         001a0c 0176 
+         001a0d 017E 
+         001a0e 0186 
+         001a0f 018E 
+         001a10 0196 
+         001a11 019E 
+         001a12 01A6 
+         001a13 01AE 
+         001a14 01B6 
+         001a15 01BE 
+ A    43 001a16 01C6          .word   454, 462, 470, 478
+         001a17 01CE 
+         001a18 01D6 
+         001a19 01DE 
+ A    44 001a1a       transfer_table_end:
+ A    45              
+ A    46              
+ A    47        0068  transfer_table_sz       .set    transfer_table_end-transfer_table_start
+
+No Assembly Errors, No Assembly Warnings
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 16:42:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+tabletransfer.abs                                                    PAGE    4
+
+LABEL                                VALUE       DEFN    REF
+
+.TMS320C540                         000000          0 
+.TMS320C541                         000000          0 
+.TMS320C541A                        000000          0 
+.TMS320C542                         000001          0 
+.TMS320C543                         000000          0 
+.TMS320C544                         000000          0 
+.TMS320C545                         000000          0 
+.TMS320C545LP                       000000          0 
+.TMS320C546                         000000          0 
+.TMS320C546LP                       000000          0 
+.TMS320C548                         000000          0 
+.TMS320C549                         000000          0 
+__TI_ASSEMBLER_VERSION__            3d10d0          0 
+__far_mode                          000000          0 
+__lflags                            000000          0 
+__no_fret                           000000          0 
+__stores_bug                        000000          0 
+transfer                            00199e+     A   6  A   3 
+transfer_loop                       0019ac+     A  23  A  17 
+transfer_table_end                  001a1a+     A  44  A  47 
+transfer_table_start                0019b2+     A  34  A  15  A  47 
+transfer_table_sz                   000068      A  47  A   3  A  14 

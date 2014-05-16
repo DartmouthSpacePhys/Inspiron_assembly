@@ -1,0 +1,26 @@
+          .nolist
+__lflags  .setsym     0000000h
+.text     .setsym     0000080h
+___text__  .setsym     0000080h
+etext     .setsym     0000cadh
+___etext__  .setsym     0000cadh
+.data     .setsym     0000000h
+___data__  .setsym     0000000h
+edata     .setsym     0000000h
+___edata__  .setsym     0000000h
+.bss      .setsym     0000000h
+___bss__  .setsym     0000000h
+end       .setsym     0000000h
+___end__  .setsym     0000000h
+binit     .setsym     0ffffffh
+___binit__  .setsym     0ffffffh
+___c_args__  .setsym     0ffffffh
+          .setsect    ".text",0000080h
+          .setsect    ".data",0000000h
+          .setsect    ".bss",0000000h
+          .setsect    ".debug_abbrev",0000000h
+          .setsect    ".debug_info",0000000h
+          .setsect    ".debug_line",0000000h
+          .list
+          .text
+          .copy       "dartm10.asm"

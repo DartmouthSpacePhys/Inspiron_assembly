@@ -1,0 +1,75 @@
+******************************************************************************
+         TMS320C54x COFF Linker PC v4.1.0                      
+******************************************************************************
+>> Linked Tue Jan 05 07:37:58 2010
+
+OUTPUT FILE NAME:   <c:\dsp\dartm10.out>
+ENTRY POINT SYMBOL: 0
+
+
+MEMORY CONFIGURATION
+
+                  name            origin    length      used    attr    fill
+         ----------------------  --------  ---------  --------  ----  --------
+PAGE  0: PROG                    00000080   0000ff00  00000c2d  RWIX
+
+PAGE  1: DATA                    00000080   0000ff80  00000000  RW  
+
+
+SECTION ALLOCATION MAP
+
+ output                                  attributes/
+section   page    origin      length       input sections
+--------  ----  ----------  ----------   ----------------
+.data      0    00000000    00000000     UNINITIALIZED
+
+.text      0    00000080    00000c2d     
+                  00000080    00000c2d     dartm10.obj (.text)
+
+.bss       1    00000000    00000000     UNINITIALIZED
+
+
+GLOBAL SYMBOLS: SORTED ALPHABETICALLY BY Name 
+
+address    name
+--------   ----
+00000000   .bss
+00000000   .data
+00000080   .text
+ffffffff   ___binit__
+00000000   ___bss__
+ffffffff   ___c_args__
+00000000   ___data__
+00000000   ___edata__
+00000000   ___end__
+00000cad   ___etext__
+00000080   ___text__
+00000000   __lflags
+ffffffff   binit
+00000000   edata
+00000000   end
+00000cad   etext
+
+
+GLOBAL SYMBOLS: SORTED BY Symbol Address 
+
+address    name
+--------   ----
+00000000   ___end__
+00000000   ___edata__
+00000000   ___data__
+00000000   end
+00000000   edata
+00000000   __lflags
+00000000   .data
+00000000   ___bss__
+00000000   .bss
+00000080   .text
+00000080   ___text__
+00000cad   etext
+00000cad   ___etext__
+ffffffff   ___c_args__
+ffffffff   binit
+ffffffff   ___binit__
+
+[16 symbols]

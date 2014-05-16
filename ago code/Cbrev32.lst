@@ -1,0 +1,200 @@
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+Cbrev32.abs                                                          PAGE    1
+
+      69 000000                 .text
+      70                        .copy       "Cbrev32.asm"
+ A     1              ;***********************************************************
+ A     2              ; Version 2.20.01                                           
+ A     3              ;***********************************************************
+ A     4              ;*****************************************************************************
+ A     5              ;  Function:    cbrev32
+ A     6              ;  Description: 32-bit complex bit-reverse routine (C54x)
+ A     7              ;
+ A     8              ;  Copyright Texas instruments Inc, 1998
+ A     9              ;-----------------------------------------------------------------------------
+ A    10              ;  Revision History:
+ A    11              ;  1.00Beta  A. Aboagye, 10/15/98. Original release.
+ A    12              ;                       from cbrev code by R. Piedra.
+ A    13              ;*****************************************************************************
+ A    14              
+ A    15                      .mmregs
+ A    16              
+ A    17                      .if __far_mode
+ A    18              offset  .set 1
+ A    19                      .else
+ A    20        0000  offset  .set 0
+ A    21                      .endif
+ A    22                                                      ; stack description
+ A    23                      .asg    (0), ret_addr
+ A    24              
+ A    25                                                      ; x in A
+ A    26                      .asg    (3+ offset), arg_y
+ A    27                      .asg    (4+ offset), arg_n
+ A    28              
+ A    29                                                      ; register usage
+ A    30                                                      ; ar0 : bit reversing idx
+ A    31                      .asg    ar2,ar_dst
+ A    32                      .asg    ar3,ar_src
+ A    33              
+ A    34                      .global     _cbrev32
+ A    35              ;        .text
+ A    36 0007b8               .sect   ".cbrev_p"
+ A    37              
+ A    38 0007b8       _cbrev32
+ A    39              
+ A    40 0007b8 4A06          PSHM    ST0                                 ; 1 cycle
+ A    41 0007b9 4A07          PSHM    ST1                                 ; 1 cycle
+ A    42 0007ba F7BE          ssbx    CPL
+ A    43 0007bb F4BA          RSBX    OVA                                 ; 1 cycle
+ A    44 0007bc F4B9          RSBX    OVB                                 ; 1 cycle
+ A    45              
+ A    46              ; Get arguments
+ A    47              ; -------------
+ A    48 0007bd 8813          stlm    a, ar_src               ; pointer to src                (1)
+ A    49 0007be 7103          mvdk    *sp(arg_y), *(ar_dst)   ; pointer to dst (temporary)    (2)
+         0007bf 0012 
+ A    50 0007c0 1004          ld      *sp(arg_n), a           ; a = n                         (1)
+ A    51 0007c1 F461          sfta    a,1
+ A    52 0007c2 8810          stlm    a, AR0                  ; AR0 = n = 1/2 size of circ buffer (1)
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+Cbrev32.abs                                                          PAGE    2
+
+ A    53 0007c3 F47F          sfta    a,-1
+ A    54 0007c4 F010          sub     #3,a                    ; a = n-3(by pass 1st and last elem)(2)
+         0007c5 0003 
+ A    55              
+ A    56              ; Select in-place or off-place bit-reversing
+ A    57              ; ------------------------------------------
+ A    58              
+ A    59 0007c6 4913          ldm     ar_src,b                ; b = src_addr                  (1)
+ A    60 0007c7 0903          sub     *sp(arg_y),b            ; b = src_addr - dst_addr       (1)
+ A    61              
+ A    62 0007c8 FA4D          bcd     in_place, beq           ; if (ar_src==ar_dst)then in_place (2)
+         0007c9 07D7+
+ A    63 0007ca 881A          stlm    a, brc                  ; brc = n-3                     (1)
+ A    64 0007cb F495          nop                             ;                               (1)
+ A    65              
+ A    66              ; Off-place bit-reversing
+ A    67              ; -----------------------
+ A    68              
+ A    69 0007cc       off_place:
+ A    70 0007cc       _start1:
+ A    71                                                      ; unroll to fill delayed slots
+ A    72 0007cc F072          rptb    off_place_end-1         ;                               (2)
+         0007cd 07D4+
+ A    73 0007ce E598          mvdd    *ar_src+,*ar_dst+       ; move high real component      (1)
+ A    74 0007cf E598          mvdd    *ar_src+,*ar_dst+       ; move low real component       (1)
+ A    75 0007d0 E598          mvdd    *ar_src+,*ar_dst+       ; move high Im component        (1)
+ A    76 0007d1 E558          mvdd    *ar_src-,*ar_dst+       ; move low Im component         (1)
+ A    77 0007d2 6D8B          mar     *ar_src-
+ A    78 0007d3 6D8B          mar     *ar_src-
+ A    79 0007d4 6DBB          mar     *ar_src+0B              ;                               (1)
+ A    80 0007d5       off_place_end:
+ A    81 0007d5 F073          b       end                     ;                               (2)
+         0007d6 07F0+
+ A    82              
+ A    83              
+ A    84              ; In-place bit-reversing
+ A    85              ; ----------------------
+ A    86              
+ A    87 0007d7       in_place:
+ A    88              
+ A    89 0007d7 6DBB          mar     *ar_src+0B              ; bypass first and last element (1)
+ A    90 0007d8 6DEA          mar     *+ar_dst(4)             ;                               (1)
+         0007d9 0004 
+ A    91 0007da       _start2:
+ A    92 0007da F272          rptbd   in_place_end-1          ;                               (2)
+         0007db 07EF+
+ A    93 0007dc 4813          ldm     ar_src,a                ; b = src_addr                  (1)
+ A    94 0007dd 4912          ldm     ar_dst, b               ; a = dst_addr                  (1)
+ A    95              
+ A    96              
+ A    97 0007de F620          sub     b,a                     ; a =  src_addr  - dst_addr             (1)
+ A    98                                                      ; if >=0  bypass move just increment
+ A    99 0007df FA42          bcd     bypass, ageq            ; if (src_addr>=dst_addr) then skip     (2)
+         0007e0 07EB+
+ A   100 0007e1 5692          dld     *ar_dst+, a             ; a = Re dst element (preserve)         (1)
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+Cbrev32.abs                                                          PAGE    3
+
+ A   101 0007e2 578A          dld     *ar_dst-, b             ; b = Im dst element (preserve)         (1)
+ A   102              
+ A   103 0007e3 E598          mvdd    *ar_src+, *ar_dst+      ; high Re dst = high Re src             (1)
+ A   104 0007e4 E598          mvdd    *ar_src+, *ar_dst+      ; low Re dst = low Re src               (1)
+ A   105 0007e5 E598          mvdd    *ar_src+, *ar_dst+      ; high Im dst = high Im src;point to Re (1)
+ A   106 0007e6 E554          mvdd    *ar_src-, *ar_dst-      ; low Im dst = low Im src;point to Re   (1)
+ A   107 0007e7 6D8A          mar     *ar_dst-
+ A   108 0007e8 6D8A          mar     *ar_dst-
+ A   109 0007e9 4F8B          dst     b, *ar_src-             ; Im src = b = Im dst;point to Re       (1)
+ A   110 0007ea 4E83          dst     a, *ar_src              ; Re src = a = Re dst                   (1)
+ A   111              
+ A   112 0007eb       bypass
+ A   113 0007eb 6DBB          mar     *ar_src+0B              ;                               (1)
+ A   114 0007ec 6DEA          mar     *+ar_dst(4)             ;                               (1)
+         0007ed 0004 
+ A   115 0007ee 4813          ldm     ar_src,a                ; b = src_addr                  (1)
+ A   116 0007ef 4912          ldm     ar_dst, b               ; a = dst_addr                  (1)
+ A   117 0007f0       in_place_end
+ A   118              
+ A   119              
+ A   120              
+ A   121              ; Return
+ A   122              ; ------
+ A   123              
+ A   124 0007f0       _end:
+ A   125 0007f0       end
+ A   126 0007f0 8A07          POPM    ST1                                 ; 1 cycle
+ A   127 0007f1 8A06          POPM    ST0                                 ; 1 cycle
+ A   128              
+ A   129                      .if     __far_mode
+ A   130                      fretd
+ A   131                      .else
+ A   132 0007f2 FE00          retd
+ A   133                      .endif
+ A   134 0007f3 F495          nop
+ A   135 0007f4 F495          nop
+ A   136              
+ A   137              ;end of file. please do not remove. it is left here to ensure that no lines of code are removed by any editor
+
+No Assembly Errors, No Assembly Warnings
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+Cbrev32.abs                                                          PAGE    4
+
+LABEL                                VALUE       DEFN    REF
+
+.TMS320C540                         000000          0 
+.TMS320C541                         000000          0 
+.TMS320C541A                        000000          0 
+.TMS320C542                         000001          0 
+.TMS320C543                         000000          0 
+.TMS320C544                         000000          0 
+.TMS320C545                         000000          0 
+.TMS320C545LP                       000000          0 
+.TMS320C546                         000000          0 
+.TMS320C546LP                       000000          0 
+.TMS320C548                         000000          0 
+.TMS320C549                         000000          0 
+__TI_ASSEMBLER_VERSION__            3d10d0          0 
+__far_mode                          000000          0  A  17  A 129 
+__lflags                            000000          0 
+__no_fret                           000000          0 
+__stores_bug                        000000          0 
+_cbrev32                            0007b8+     A  38  A  34 
+_end                                0007f0+     A 124 
+_start1                             0007cc+     A  70 
+_start2                             0007da+     A  91 
+bypass                              0007eb+     A 112  A  99 
+end                                 0007f0+     A 125  A  81 
+in_place                            0007d7+     A  87  A  62 
+in_place_end                        0007f0+     A 117  A  92 
+off_place                           0007cc+     A  69 
+off_place_end                       0007d5+     A  80  A  72 
+offset                              000000      A  20  A  49  A  50  A  60 

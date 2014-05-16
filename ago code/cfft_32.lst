@@ -1,0 +1,606 @@
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+cfft_32.abs                                                          PAGE    1
+
+      70 001308                 .text
+      71                        .copy       "cfft_32.asm"
+ A     1              ;***********************************************************
+ A     2              ; Version 2.20.01                                           
+ A     3              ;***********************************************************
+ A     4              ;============================================================================
+ A     5              ;  Description:   32-bit Complex FFT
+ A     6              ;
+ A     7              ;  Target Processor: C54x
+ A     8              ;
+ A     9              ;  Author:      Aaron Aboagye, Texas Instruments, Inc., Oct 14, 1998
+ A    10              ;               from inverse code by Mike Hannah,  Texas Instruments, Inc.,  May 14, 1998
+ A    11              ;
+ A    12              ;=============================================================================
+ A    13              
+ A    14                              .global Tempdw1
+ A    15                              .global Tempdw2
+ A    16                              .global fftStage1and2
+ A    17                              .global fftStage3
+ A    18                              .global fftStageX
+ A    19                              .global fftButterfly
+ A    20              
+ A    21                      .mmregs
+ A    22 000140               .bss Tempdw1,1*2,0,0  ;temporary dword
+ A    23 000142               .bss Tempdw2,1*2,0,0  ;temporary dword
+ A    24              
+ A    25 001308               .text
+ A    26              ;=============================================================================
+ A    27              ; Function:     fftStage1and2
+ A    28              ;
+ A    29              ; Description:  Combined stage 1 and 2 of Complex Inverse FFT (double precision)
+ A    30              ;
+ A    31              ; Inputs:       None
+ A    32              ;
+ A    33              ; Outputs:      None
+ A    34              ;
+ A    35              ; Assumptions:  Output will be in place of input.
+ A    36              ;
+ A    37              ;=============================================================================
+ A    38 001308       fftStage1and2:
+ A    39                      .if     __far_mode
+ A    40                      ld      *sp(10), A
+ A    41                      .else
+ A    42 001308 1008          ld      *sp(8), A
+ A    43                      .endif
+ A    44 001309 FA45          bcd     NoScale, AEQ
+         00130a 1340'
+ A    45 00130b ED00          ld      #0, ASM
+ A    46 00130c F495          nop
+ A    47 00130d ED1E          ld      #-2, ASM
+ A    48              
+ A    49 00130e F072          rptb    Stg1and2End    ;(N/4)*28+3
+         00130f 133E'
+ A    50 001310 5782          dld     *ar2, B         ;B=R1                           R1
+ A    51 001311 5583          dsub    *ar3, B         ;B=R1-R2                        R2
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+cfft_32.abs                                                          PAGE    2
+
+ A    52 001312 5682          dld     *ar2, A         ;A=R1                           R1
+ A    53 001313 5083          dadd    *ar3, A         ;A=R1+R2                        R2
+ A    54 001314 8793          sth     B, ASM, *ar3+   ;R2H=R1-R2/4                    R2
+ A    55 001315 858B          stl     B, ASM, *ar3-   ;R2L=R1-R2/4                    R2
+ A    56 001316 5784          dld     *ar4, B         ;B=R3                           R3
+ A    57 001317 5385          dadd    *ar5, B         ;B=R3+R4
+ A    58 001318 F600          add     B, A            ;A=(R1+R2)+(R3+R4)
+ A    59 001319 8692          sth     A, ASM, *ar2+   ;R1H'=((R1+R2)+(R3+R4))/4       R1
+ A    60 00131a 8492          stl     A, ASM, *ar2+   ;R1L'=((R1+R2)+(R3+R4))/4       I1
+ A    61 00131b F621          sub     B, 1, A         ;A=(R1+R2)-(R3+R4)
+ A    62 00131c 5784          dld     *ar4, B         ;B=R3                           R3
+ A    63 00131d 5585          dsub    *ar5, B         ;B=R3-R4                        R4
+ A    64 00131e 8694          sth     A, ASM, *ar4+   ;R3H'=((R1+R2)-(R3+R4))/4       I3
+ A    65 00131f 8494          stl     A, ASM, *ar4+   ;R3L'=((R1+R2)-(R3+R4))/4       I3
+ A    66 001320 5683          dld     *ar3, A         ;A=(R1-R2)/4                    R2
+ A    67 001321 8795          sth     B, ASM, *ar5+   ;R4H=(R3-R4)/4                  R4
+ A    68 001322 8595          stl     B, ASM, *ar5+   ;R4L=(R3-R4)/4                  I4
+ A    69 001323 5784          dld     *ar4, B         ;B=I3                           I3
+ A    70 001324 558D          dsub    *ar5-, B        ;B=I3-I4                        R4
+ A    71 001325 F680          add     B, ASM, A       ;A=((R1-R2)+(I3-I4))/4
+ A    72 001326 4E93          dst     A, *ar3+        ;R2'=((R1-R2)+(I3-I4))/4        I2
+ A    73 001327 F63F          sub     B, -1, A        ;A=((R1-R2)-(I3-I4))/4
+ A    74 001328 5785          dld     *ar5, B         ;B=(R3-R4)/4                    R4
+ A    75 001329 4E95          dst     A, *ar5+        ;R4'=((R1-R2)-(I3-I4))/4        I4
+ A    76 00132a 5684          dld     *ar4, A         ;A=I3                           I3
+ A    77 00132b 5085          dadd    *ar5, A         ;A=I3+I4                        I4
+ A    78 00132c 8694          sth     A, ASM, *ar4+   ;I3H=(I3+I4)/4                  I3
+ A    79 00132d 848C          stl     A, ASM, *ar4-   ;I3L=(I3+I4)/4                  I3
+ A    80 00132e 5682          dld     *ar2, A         ;A=I1                           I1
+ A    81 00132f 5483          dsub    *ar3, A         ;A=I1-I2                        I2
+ A    82 001330 F602          add     B, 2, A         ;A=(I1-I2)+(r3-r4)
+ A    83 001331 8695          sth     A, ASM,*ar5+    ;I4H'=((I1-I2)+(r3-r4))/4       I4
+ A    84 001332 84B5          stl     A, ASM,*ar5+0   ;I4H'=((I1-I2)+(r3-r4))/4       next R4
+ A    85 001333 F623          sub     B, 3, A         ;A=(I1-I2)-(r3-r4)
+ A    86 001334 5782          dld     *ar2, B         ;B=I1                           I1
+ A    87 001335 5383          dadd    *ar3, B         ;B=I1+I2                        I2
+ A    88 001336 8693          sth     A, ASM, *ar3+   ;I2H'=(I1-I2)-(R3-R4)/4         I2
+ A    89 001337 84B3          stl     A, ASM, *ar3+0  ;I2H'=(I1-I2)-(R3-R4)/4         next R2
+ A    90 001338 5684          dld     *ar4, A         ;A=(I3+I4)/4                    I3
+ A    91 001339 F502          add     A, 2, B         ;B=(I1+I2)+(I3+I4)
+ A    92 00133a 8792          sth     B, ASM, *ar2+   ;I1H'=(I1+I2)+(I3+I4)/4         I1
+ A    93 00133b 85B2          stl     B, ASM, *ar2+0  ;I1H'=(I1+I2)+(I3+I4)/4         next R1
+ A    94 00133c F523          sub     A, 3, B         ;B=(I1+I2)-(I3+I4)
+ A    95 00133d 8794          sth     B, ASM, *ar4+   ;I3'=((I1+I2)-(I3+I4))/4        I3
+ A    96 00133e       Stg1and2End
+ A    97 00133e 85B4          stl     B, ASM, *ar4+0  ;I3'=((I1+I2)-(I3+I4))/4        next R3
+ A    98                      .if     __far_mode
+ A    99                      fret
+ A   100                      .else
+ A   101 00133f FC00          ret
+ A   102                      .endif
+ A   103              
+ A   104              
+ A   105 001340       NoScale:
+ A   106 001340 F072          rptb    NoScaleEnd      ;(N/4)*28+3
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+cfft_32.abs                                                          PAGE    3
+
+         001341 1370'
+ A   107 001342 5782          dld     *ar2, B         ;B=R1                           R1
+ A   108 001343 5583          dsub    *ar3, B         ;B=R1-R2                        R2
+ A   109 001344 5682          dld     *ar2, A         ;A=R1                           R1
+ A   110 001345 5083          dadd    *ar3, A         ;A=R1+R2                        R2
+ A   111 001346 8793          sth     B, ASM, *ar3+   ;R2H=R1-R2                      R2
+ A   112 001347 858B          stl     B, ASM, *ar3-   ;R2L=R1-R2                      R2
+ A   113 001348 5784          dld     *ar4, B         ;B=R3                           R3
+ A   114 001349 5385          dadd    *ar5, B         ;B=R3+R4
+ A   115 00134a F600          add     B, A            ;A=(R1+R2)+(R3+R4)
+ A   116 00134b 8692          sth     A, ASM, *ar2+   ;R1H'=((R1+R2)+(R3+R4))         R1
+ A   117 00134c 8492          stl     A, ASM, *ar2+   ;R1L'=((R1+R2)+(R3+R4))         I1
+ A   118 00134d F621          sub     B, 1, A         ;A=(R1+R2)-(R3+R4)
+ A   119 00134e 5784          dld     *ar4, B         ;B=R3                           R3
+ A   120 00134f 5585          dsub    *ar5, B         ;B=R3-R4                        R4
+ A   121 001350 8694          sth     A, ASM, *ar4+   ;R3H'=((R1+R2)-(R3+R4))         I3
+ A   122 001351 8494          stl     A, ASM, *ar4+   ;R3L'=((R1+R2)-(R3+R4))         I3
+ A   123 001352 5683          dld     *ar3, A         ;A=(R1-R2)                      R2
+ A   124 001353 8795          sth     B, ASM, *ar5+   ;R4H=(R3-R4)                    R4
+ A   125 001354 8595          stl     B, ASM, *ar5+   ;R4L=(R3-R4)                    I4
+ A   126 001355 5784          dld     *ar4, B         ;B=I3                           I3
+ A   127 001356 558D          dsub    *ar5-, B        ;B=I3-I4                        R4
+ A   128 001357 F680          add     B, ASM, A       ;A=((R1-R2)+(I3-I4))
+ A   129 001358 4E93          dst     A, *ar3+        ;R2'=((R1-R2)+(I3-I4))          I2
+ A   130 001359 F621          sub     B, 1, A         ;A=((R1-R2)-(I3-I4))  
+ A   131 00135a 5785          dld     *ar5, B         ;B=(R3-R4)                      R4
+ A   132 00135b 4E95          dst     A, *ar5+        ;R4'=((R1-R2)-(I3-I4))          I4
+ A   133 00135c 5684          dld     *ar4, A         ;A=I3                           I3
+ A   134 00135d 5085          dadd    *ar5, A         ;A=I3+I4                        I4
+ A   135 00135e 8694          sth     A, ASM, *ar4+   ;I3H=(I3+I4)                    I3
+ A   136 00135f 848C          stl     A, ASM, *ar4-   ;I3L=(I3+I4)                    I3
+ A   137 001360 5682          dld     *ar2, A         ;A=I1                           I1
+ A   138 001361 5483          dsub    *ar3, A         ;A=I1-I2                        I2
+ A   139 001362 F600          add     B, A            ;A=(I1-I2)+(r3-r4)
+ A   140 001363 8695          sth     A, ASM,*ar5+    ;I4H'=((I1-I2)+(r3-r4))         I4
+ A   141 001364 84B5          stl     A, ASM,*ar5+0   ;I4H'=((I1-I2)+(r3-r4))         next R4
+ A   142 001365 F621          sub     B, 1, A         ;A=(I1-I2)-(r3-r4)
+ A   143 001366 5782          dld     *ar2, B         ;B=I1                           I1
+ A   144 001367 5383          dadd    *ar3, B         ;B=I1+I2                        I2
+ A   145 001368 8693          sth     A, ASM, *ar3+   ;I2H'=(I1-I2)-(R3-R4)           I2
+ A   146 001369 84B3          stl     A, ASM, *ar3+0  ;I2H'=(I1-I2)-(R3-R4)           next R2
+ A   147 00136a 5684          dld     *ar4, A         ;A=(I3+I4)                      I3
+ A   148 00136b F500          add     A, B            ;B=(I1+I2)+(I3+I4)
+ A   149 00136c 8792          sth     B, ASM, *ar2+   ;I1H'=(I1+I2)+(I3+I4)           I1
+ A   150 00136d 85B2          stl     B, ASM, *ar2+0  ;I1H'=(I1+I2)+(I3+I4)           next R1
+ A   151 00136e F521          sub     A, 1, B         ;B=(I1+I2)-(I3+I4)
+ A   152 00136f 8794          sth     B, ASM, *ar4+   ;I3'=((I1+I2)-(I3+I4))          I3
+ A   153 001370       NoScaleEnd
+ A   154 001370 85B4          stl     B, ASM, *ar4+0  ;I3'=((I1+I2)-(I3+I4))          next R3
+ A   155                      .if     __far_mode
+ A   156                      fret
+ A   157                      .else
+ A   158 001371 FC00          ret
+ A   159                      .endif
+ A   160              
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+cfft_32.abs                                                          PAGE    4
+
+ A   161              ;=============================================================================
+ A   162              ; Function:     fftStage3
+ A   163              ;
+ A   164              ; Description:  Stage 3 of Complex Inverse FFT (double precision)
+ A   165              ;
+ A   166              ; Inputs:       None
+ A   167              ;
+ A   168              ; Outputs:      None
+ A   169              ;
+ A   170              ; Assumptions:  Output will be in place of input.
+ A   171              ;
+ A   172              ;=============================================================================
+ A   173 001372       fftStage3:
+ A   174                      .if     __far_mode
+ A   175                      ld      *sp(10), A
+ A   176                      .else
+ A   177 001372 1008          ld      *sp(8), A
+ A   178                      .endif
+ A   179 001373 ED1F          ld      #-1, ASM
+ A   180 001374 F495          nop
+ A   181 001375 FD45          xc      1, AEQ
+ A   182 001376 ED00          ld      #0, ASM        ;ASM=0
+ A   183 001377 F072          rptb    fftStg3End-1   ;(N/8)*36+3
+         001378 13DE'
+ A   184              
+ A   185              
+ A   186              ;!!!!! rptb occurs here
+ A   187              ; Butterfly1
+ A   188 001379 5683          dld     *ar3, A         ;A=QR                           QR
+ A   189 00137a 5782          dld     *ar2, B         ;B=PR                           PR
+ A   190 00137b 5583          dsub    *ar3, B         ;B=PR-QR                        QR
+ A   191 00137c 8793          sth     B, ASM, *ar3+   ;QRH=(PR-QR)/2                  QR
+ A   192 00137d 8593          stl     B, ASM, *ar3+   ;QRL=(PR-QR)/2                  QI
+ A   193 00137e F501          add     A, 1, B         ;B=PR+QR
+ A   194 00137f 8792          sth     B, ASM, *ar2+   ;PRH=(PR+QR)/2                  PR
+ A   195 001380 8592          stl     B, ASM, *ar2+   ;PRL=(PR+QR)/2                  PI
+ A   196 001381 5683          dld     *ar3, A         ;A=QI                           QI
+ A   197 001382 5783          dld     *ar3, B         ;B=QI                           QI
+ A   198 001383 5382          dadd    *ar2, B         ;B=PI+QI                        PI
+ A   199 001384 8792          sth     B, ASM, *ar2+   ;PI=(PI+QI)/2                   PI
+ A   200 001385 8592          stl     B, ASM, *ar2+   ;PI=(PI+QI)/2                   PR+1
+ A   201 001386 F521          sub     A, 1, B         ;B=PI-QI
+ A   202 001387 8793          sth     B, ASM, *ar3+   ;QI=(PI-QI)/2                   QI
+ A   203 001388 8593          stl     B, ASM, *ar3+   ;QI=(PI-QI)/2                   QR+1
+ A   204              ; Butterfly2
+ A   205              ;===== QR*W (Q31) =====
+ A   206 001389 E800          ld      #0, A
+ A   207 00138a A669          macsu   *ar4-, *ar3+, A ;QRH*WL                         QRL WH
+ A   208 00138b A652          macsu   *ar3-, *ar4, A  ;QRH*WL + QRL*WH
+ A   209 00138c F450          ld      A, -16, A       ;A>>16
+ A   210 00138d B0A9          mac     *ar4+, *ar3+, A ;A=QR*W                         QR WL
+ A   211 00138e 8295          sth     A, *ar5+        ;Tempdw1=QR*W for later use
+ A   212 00138f 808D          stl     A, *ar5-
+ A   213              ;======================
+ A   214 001390 6D93          mar     *ar3+           ;point to QI                    QI
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+cfft_32.abs                                                          PAGE    5
+
+ A   215              ;===== QI*W (Q31) =====
+ A   216 001391 E900          ld      #0, B           ;QIH*WL                         QIL WH
+ A   217 001392 A769          macsu   *ar4-, *ar3+, B ;QIH*WL + QIL*WH
+ A   218 001393 A752          macsu   *ar3-, *ar4, B  ;A>>16
+ A   219 001394 F750          ld      B, -16, B       ;A=QI*W                         QI WL
+ A   220 001395 B3A5          mac     *ar4+, *ar3-, B ;A=QI*W                         QI
+ A   221 001396 8396          sth     B, *ar6+        ;Tempdw2=QI*W for later use
+ A   222 001397 818E          stl     B, *ar6-
+ A   223              ;======================
+ A   224 001398 6D8B          mar     *ar3-           ;point to QR again              QR
+ A   225 001399 F600          add     B, A            ;A=QR*W + QI*W
+ A   226 00139a 5082          dadd    *ar2, A         ;A=PR+(QR*W + QI*W)             PR
+ A   227 00139b 5782          dld     *ar2, B         ;B=PR                           PR
+ A   228 00139c 8692          sth     A, ASM, *ar2+   ;PRH'=(PR+(QR*W + QI*W))/2      PR
+ A   229 00139d 8492          stl     A, ASM, *ar2+   ;PRL'=(PR+(QR*W + QI*W))/2      PI
+ A   230 00139e F620          sub     B, A            ;A=(QR*W + QI*W)
+ A   231 00139f F520          sub     A, B            ;B=PR-(QR*W + QI*W)
+ A   232 0013a0 8793          sth     B, ASM, *ar3+   ;QRH'=(PR-(QR*W + QI*W))/2      QR
+ A   233 0013a1 8593          stl     B, ASM, *ar3+   ;QRL'=(PR-(QR*W + QI*W))/2      QI
+ A   234              
+ A   235 0013a2 5786          dld     *ar6, B         ;B=QI*W
+ A   236 0013a3 5585          dsub    *ar5, B         ;B=QI*W - QR*W
+ A   237 0013a4 5382          dadd    *ar2, B         ;B=PI+(QI*W - QR*W)             PI
+ A   238 0013a5 5682          dld     *ar2, A         ;A=PI                           PI
+ A   239 0013a6 8792          sth     B, ASM, *ar2+   ;PIH'=(PI+(QI*W - QR*W))/2      PI
+ A   240 0013a7 8592          stl     B, ASM, *ar2+   ;PIL'=(PI+(QI*W - QR*W))/2      PR+1
+ A   241 0013a8 F520          sub     A, B            ;B=(QI*W - QR*W)
+ A   242 0013a9 F620          sub     B, A            ;A=PI-(QI*W - QR*W)
+ A   243 0013aa 8693          sth     A, ASM, *ar3+   ;QIH'=(PI-(QI*W - QR*W))/2      QI
+ A   244 0013ab 8493          stl     A, ASM, *ar3+   ;QIL'=(PI-(QI*W - QR*W))/2      QR+1
+ A   245              ; Butterfly3
+ A   246 0013ac 5692          dld     *ar2+, A        ;A=PR                           PI
+ A   247 0013ad 578A          dld     *ar2-, B        ;B=PI                           PR
+ A   248 0013ae 5593          dsub    *ar3+, B        ;B=PI-QR                        QI
+ A   249 0013af 508B          dadd    *ar3-, A        ;A=PR+QI                        QR
+ A   250 0013b0 8692          sth     A, ASM, *ar2+   ;PRH'=(PR+QI)/2                 PR
+ A   251 0013b1 8492          stl     A, ASM, *ar2+   ;PRL'=(PR+QI)/2                 PI
+ A   252 0013b2 8792          sth     B, ASM, *ar2+   ;PIH'=(PI-QR)/2                 PI
+ A   253 0013b3 8592          stl     B, ASM, *ar2+   ;PIL'=(PI-QR)/2                 PR+1
+ A   254 0013b4 5383          dadd    *ar3, B         ;B=PI                           QR
+ A   255 0013b5 5393          dadd    *ar3+, B        ;B=PI+QR                        QI
+ A   256 0013b6 5483          dsub    *ar3, A         ;A=PR                           QI
+ A   257 0013b7 548B          dsub    *ar3-, A        ;A=PR-QI                        QR
+ A   258 0013b8 8693          sth     A, ASM, *ar3+   ;QRH'=(PR-QI)/2                 QR
+ A   259 0013b9 8493          stl     A, ASM, *ar3+   ;QRL'=(PR-QI)/2                 QI
+ A   260 0013ba 8793          sth     B, ASM, *ar3+   ;QIH'=(PI+QR)/2                 QI
+ A   261 0013bb 8593          stl     B, ASM, *ar3+   ;QIH'=(PI+QR)/2                 QR+1
+ A   262              ; Butterfly4
+ A   263              ;===== QR*W (Q31) =====
+ A   264 0013bc E800          ld      #0, A
+ A   265 0013bd A669          macsu   *ar4-, *ar3+, A ;QRH*WL                         QRL WH
+ A   266 0013be A652          macsu   *ar3-, *ar4, A  ;QRH*WL + QRL*WH
+ A   267 0013bf F450          ld      A, -16, A       ;A>>16
+ A   268 0013c0 B0A9          mac     *ar4+, *ar3+, A ;A=QR*W                         QRL WL
+ A   269 0013c1 8295          sth     A, *ar5+        ;Tempdw1=QR*W for later use
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+cfft_32.abs                                                          PAGE    6
+
+ A   270 0013c2 808D          stl     A, *ar5-
+ A   271              ;======================
+ A   272 0013c3 6D93          mar     *ar3+           ;point to QI                    QR
+ A   273              ;===== QI*W (Q31) =====
+ A   274 0013c4 E900          ld      #0, B           ;QIH*WL                         QIL WH
+ A   275 0013c5 A769          macsu   *ar4-, *ar3+, B ;QIH*WL + QIL*WH
+ A   276 0013c6 A752          macsu   *ar3-, *ar4, B  ;B>>16
+ A   277 0013c7 F750          ld      B, -16, B       ;B=QI*W                         QI WL
+ A   278 0013c8 B3A5          mac     *ar4+, *ar3-, B ;B=QI*W                         QI
+ A   279 0013c9 8396          sth     B, *ar6+        ;Tempdw2=QI*W for later use
+ A   280 0013ca 818E          stl     B, *ar6-
+ A   281              ;======================
+ A   282 0013cb 6D8B          mar     *ar3-           ;point to QR again              QR
+ A   283 0013cc F620          sub     B, A            ;A=QR*W - QI*W
+ A   284 0013cd 5082          dadd    *ar2, A         ;A=PR+(QR*W - QI*W)             PR
+ A   285 0013ce 5782          dld     *ar2, B         ;B=PR                           PR
+ A   286 0013cf 8693          sth     A, ASM, *ar3+   ;QRH'=(PR+(QR*W + QI*W))/2      QR
+ A   287 0013d0 8493          stl     A, ASM, *ar3+   ;QRL'=(PR+(QR*W + QI*W))/2      QI
+ A   288 0013d1 F620          sub     B, A            ;A=QR*W - QI*W
+ A   289 0013d2 F520          sub     A, B            ;B=PR-(QR*W - QI*W)
+ A   290 0013d3 8792          sth     B, ASM, *ar2+   ;PRH'=((PR-(QR*W - QI*W))/2     PR
+ A   291 0013d4 8592          stl     B, ASM, *ar2+   ;PRL'=((PR-(QR*W - QI*W))/2     PI
+ A   292 0013d5 5785          dld     *ar5, B         ;B=QR*W
+ A   293 0013d6 5386          dadd    *ar6, B         ;B=QR*W+QI*W
+ A   294 0013d7 5982          drsub   *ar2, B         ;B=PI-(QR*W+QI*W)               PI
+ A   295 0013d8 5682          dld     *ar2, A         ;A=PI                           PI
+ A   296 0013d9 8792          sth     B, ASM, *ar2+   ;PIH'=(PI-(QR*W + QI*W))/2      PI
+ A   297 0013da 85B2          stl     B, ASM, *ar2+0  ;PIL'=(PI-(QR*W + QI*W))/2      PR+1
+ A   298 0013db F520          sub     A, B            ;B=-(QR*W + QI*W)
+ A   299 0013dc F620          sub     B, A            ;A=PI+(QR*W + QI*W)
+ A   300 0013dd 8693          sth     A, ASM, *ar3+   ;QIH'=(PI+(QR*W + QI*W))/2      QI
+ A   301 0013de 84B3          stl     A, ASM, *ar3+0  ;QIL'=(PI+(QR*W + QI*W))/2      QR+1
+ A   302 0013df       fftStg3End
+ A   303                      .if     __far_mode
+ A   304                      fret
+ A   305                      .else
+ A   306 0013df FC00          ret
+ A   307                      .endif
+ A   308              
+ A   309              ;=============================================================================
+ A   310              ; Function:     fftStageX
+ A   311              ;
+ A   312              ; Description:  General radix 2 stage of Complex FFT (double precision)
+ A   313              ;
+ A   314              ; Inputs:       None
+ A   315              ;
+ A   316              ; Outputs:      None
+ A   317              ;
+ A   318              ; Assumptions:  Output will be in place of input.
+ A   319              ;
+ A   320              ;=============================================================================
+ A   321              ;        .global fftStageX
+ A   322 0013e0       fftStageX:
+ A   323                      .if     __far_mode
+ A   324                      mvdk    *SP(2),BRC
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+cfft_32.abs                                                          PAGE    7
+
+ A   325                      .else
+ A   326 0013e0 7101          mvdk    *SP(1),BRC
+         0013e1 001A 
+ A   327                      .endif
+ A   328 0013e2 4A10          pshm    AR0             ;save current offset index
+ A   329 0013e3 E764          mvmm    ar6,ar4         ;start of cosine in stage 'stg'
+ A   330 0013e4 E775          mvmm    ar7,ar5         ;start of sine in stage   'stg'
+ A   331                      .if     __far_mode
+ A   332                      mvdk    *SP(4),AR0      ;offset index for butterfly optimization
+ A   333                      .else
+ A   334 0013e5 7103          mvdk    *SP(3),AR0      ;offset index for butterfly optimization
+         0013e6 0010 
+ A   335                      .endif
+ A   336              
+ A   337              ;===== Butterfly starts here =====
+ A   338 0013e7 5782          dld     *ar2, B         ;B=PR                           PR
+ A   339 0013e8 5583          dsub    *ar3, B         ;B=PR-QR                        QR
+ A   340 0013e9 5683          dld     *ar3, A         ;A=QR                           QR
+ A   341 0013ea 8793          sth     B, ASM, *ar3+   ;QRH'=(PR-QR)/2                 QR
+ A   342 0013eb 8593          stl     B, ASM, *ar3+   ;QRL'=(PR-QR)/2                 QI
+ A   343 0013ec F501          add     A, 1, B         ;B=PR+QR
+ A   344 0013ed 8792          sth     B, ASM, *ar2+   ;PRH'=(PR+QR)/2                 PR
+ A   345 0013ee 8592          stl     B, ASM, *ar2+   ;PRL'=(PR+QR)/2                 PI
+ A   346 0013ef 5683          dld     *ar3, A         ;A=QI                           QI
+ A   347 0013f0 5182          dadd    *ar2, A, B      ;B=PI+QI                        PI
+ A   348 0013f1 8792          sth     B, ASM, *ar2+   ;PIH'=(PI+QI)/2                 PI
+ A   349 0013f2 8592          stl     B, ASM, *ar2+   ;PIH'=(PI+QI)/2                 PR+1
+ A   350 0013f3 F521          sub     A, 1, B         ;B=PI-QI
+ A   351 0013f4 F272          rptbd   BflyX           ;delayed block repeat
+         0013f5 141C'
+ A   352 0013f6 8793          sth     B, ASM, *ar3+   ;QIH'=(PI-QI)/2                 QI
+ A   353 0013f7 8593          stl     B, ASM, *ar3+   ;QIH'=(PI-QI)/2                 QR+1
+ A   354              ;!!!!! rptb starts here !!!!!
+ A   355              ;===== QR*WR (Q31) =====
+ A   356 0013f8 E900          ld      #0, B
+ A   357 0013f9 A769          macsu   *ar4-, *ar3+, B ;QRH*WRL                        QRL WRH
+ A   358 0013fa A792          macsu   *ar3+, *ar4, B  ;QRH*WRL + QRL*WRH              QI WRH
+ A   359 0013fb F750          ld      B, -16, B       ;B>>16
+ A   360                      ;>>16 INTEGRATED INTO QI*WI FOR OPTIMIZATION
+ A   361                      ;FINAL MAC HAS BEEN MOVED AFTER QI*WI FOR OPTIMIZATION
+ A   362              ;======================
+ A   363              ;===== QI*WI (Q31) =====
+ A   364 0013fc E800          ld      #0, A
+ A   365 0013fd A679          macsu   *ar5-, *ar3+, A ;QIH*WIL                        QIL WIH
+ A   366 0013fe A653          macsu   *ar3-, *ar5, A  ;QIH*WIL + QIL*WIH              QIH WIH
+ A   367 0013ff F450          ld      A, -16, A       ;A>>16
+ A   368 001400 B0B5          mac     *ar5+, *ar3-, A ;A=QIH*WIH                      QRL WIL
+ A   369              ;======================
+ A   370 001401 6D8B          mar     *ar3-           ;point to QR again              QR
+ A   371 001402 B3A1          mac     *ar4+, *ar3, B  ;B+=QRH*WRH=QR*WR               QR  WRL
+ A   372 001403 F520          sub     A, B            ;B = (QR*WR - QI*WI)
+ A   373 001404 5382          dadd    *ar2, B         ;B=PR+(QR*WR - QI*WI)           PR
+ A   374 001405 5682          dld     *ar2, A         ;A=PR                           PR
+ A   375 001406 8792          sth     B, ASM, *ar2+   ;PRH'=(PR+(QR*WR - QI*WI))/2    PR
+ A   376 001407 8592          stl     B, ASM, *ar2+   ;PRL'=(PR+(QR*WR - QI*WI))/2    PI
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+cfft_32.abs                                                          PAGE    8
+
+ A   377 001408 F520          sub     A, B            ;B=QR*WR - QI*WI
+ A   378 001409 F620          sub     B, A            ;A=PR-(QR*WR - QI*WI)
+ A   379              ;===== QR*WI (Q31) =====
+ A   380 00140a E900          ld      #0, B
+ A   381 00140b A779          macsu   *ar5-, *ar3+, B ;QRH*WIL                        QRL WIH
+ A   382 00140c A793          macsu   *ar3+, *ar5, B  ;QRH*WIL + QRL*WIH              QIH WIH
+ A   383              
+ A   384              ;===== QI*WR (Q31) =====
+ A   385 00140d A769          macsu   *ar4-, *ar3+, B ;QIH*WRL                        QIL WRH
+ A   386 00140e A752          macsu   *ar3-, *ar4, B  ;QIH*WRL + QIL*WRH              QIH WRH
+ A   387 00140f F750          ld      B, -16, B       ;B>>16
+ A   388 001410 B3E5          mac     *ar4+0%,*ar3-,B ;B=QIH*WRH, next WRL            QIL WRL+1
+ A   389 001411 6D8B          mar     *ar3-           ;                               QRH
+ A   390 001412 B3F1          mac     *ar5+0%,*ar3,B  ;B=QRH*WIH, next WIL            QRH WIL+1
+ A   391                                              ;B=QIWR+QRWI
+ A   392              ;======================
+ A   393 001413 8693          sth     A, ASM, *ar3+   ;QRH'=(PR-(QR*WR - QI*WI))/2    QRL
+ A   394 001414 8493          stl     A, ASM, *ar3+   ;QRL'=(PR-(QR*WR - QI*WI))/2    QIH
+ A   395              ;======================
+ A   396              
+ A   397 001415 5382          dadd    *ar2, B         ;B=PI+(QI*WR+QR*WI)             PI
+ A   398 001416 5682          dld     *ar2, A         ;A=PI                           PI
+ A   399 001417 8792          sth     B, ASM, *ar2+   ;PIH'=(PI+(QI*WR+QR*WI))/2      QI
+ A   400 001418 8592          stl     B, ASM, *ar2+   ;PIL'=(PI+(QI*WR+QR*WI))/2      QR+1
+ A   401 001419 F520          sub     A, B            ;B=(QI*WR+QR*WI)
+ A   402 00141a F620          sub     B, A            ;A=PI-(QI*WR+QR*WI)
+ A   403 00141b 8693          sth     A, ASM, *ar3+   ;QIH'=(PI-(QI*WR+QR*WI))/2      PI
+ A   404 00141c 8493  BflyX   stl     A, ASM, *ar3+   ;QIL'=(PI-(QI*WR+QR*WI))/2      PR+1
+ A   405              
+ A   406 00141d 8A10          popm    AR0             ;restore offset index
+ A   407 00141e 6E89          banzd   fftStageX, *ar1-
+         00141f 13E0'
+ A   408 001420 6DB2          mar     *ar2+0
+ A   409 001421 6DB3          mar     *ar3+0
+ A   410              ;!!!!! Branch occurs here !!!!!
+ A   411                      .if     __far_mode
+ A   412                      fret
+ A   413                      .else
+ A   414 001422 FC00          ret
+ A   415                      .endif
+ A   416              
+ A   417              
+ A   418              ;=============================================================================
+ A   419              ; Function:     fftButterfly
+ A   420              ;
+ A   421              ; Description:  General radix 2 butterfly of Complex FFT (double precision)
+ A   422              ;
+ A   423              ; Inputs:       None
+ A   424              ;
+ A   425              ; Outputs:      None
+ A   426              ;
+ A   427              ; Assumptions:  BRC has been initialized already.
+ A   428              ;               Output will be in place of input.
+ A   429              ;
+ A   430              ;=============================================================================
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+cfft_32.abs                                                          PAGE    9
+
+ A   431              ;        .global fftButterfly
+ A   432 001423       fftButterfly:
+ A   433 001423 5782          dld     *ar2, B         ;B=PR                           PR
+ A   434 001424 5583          dsub    *ar3, B         ;B=PR-QR                        QR
+ A   435 001425 5683          dld     *ar3, A         ;A=QR                           QR
+ A   436 001426 8793          sth     B, ASM, *ar3+   ;QRH'=(PR-QR)/2                 QR
+ A   437 001427 8593          stl     B, ASM, *ar3+   ;QRL'=(PR-QR)/2                 QI
+ A   438 001428 F501          add     A, 1, B         ;B=PR+QR
+ A   439 001429 8792          sth     B, ASM, *ar2+   ;PRH'=(PR+QR)/2                 PR
+ A   440 00142a 8592          stl     B, ASM, *ar2+   ;PRL'=(PR+QR)/2                 PI
+ A   441 00142b 5683          dld     *ar3, A         ;A=QI                           QI
+ A   442 00142c 5182          dadd    *ar2, A, B      ;B=PI+QI                        PI
+ A   443 00142d 8792          sth     B, ASM, *ar2+   ;PIH'=(PI+QI)/2                 PI
+ A   444 00142e 8592          stl     B, ASM, *ar2+   ;PIH'=(PI+QI)/2                 PR+1
+ A   445 00142f F521          sub     A, 1, B         ;B=PI-QI
+ A   446 001430 F272          rptbd   BflyEnd         ;delayed block repeat
+         001431 1458'
+ A   447 001432 8793          sth     B, ASM, *ar3+   ;QIH'=(PI-QI)/2                 QI
+ A   448 001433 8593          stl     B, ASM, *ar3+   ;QIH'=(PI-QI)/2                 QR+1
+ A   449              
+ A   450              ;!!!!! rptb starts here !!!!!
+ A   451              ;===== QR*WR (Q31) =====
+ A   452 001434 E900          ld      #0, B
+ A   453 001435 A769          macsu   *ar4-, *ar3+, B ;QRH*WRL                        QRL WRH
+ A   454 001436 A792          macsu   *ar3+, *ar4, B  ;QRH*WRL + QRL*WRH              QI WRH
+ A   455 001437 F750          ld      B, -16, B       ;B>>16
+ A   456                      ;>>16 INTEGRATED INTO QI*WI FOR OPTIMIZATION
+ A   457                      ;FINAL MAC HAS BEEN MOVED AFTER QI*WI FOR OPTIMIZATION
+ A   458              ;======================
+ A   459              ;===== QI*WI (Q31) =====
+ A   460 001438 E800          ld      #0, A
+ A   461 001439 A679          macsu   *ar5-, *ar3+, A ;QIH*WIL                        QIL WIH
+ A   462 00143a A653          macsu   *ar3-, *ar5, A  ;QIH*WIL + QIL*WIH              QIH WIH
+ A   463 00143b F450          ld      A, -16, A       ;A>>16
+ A   464 00143c B0B5          mac     *ar5+, *ar3-, A ;A=QIH*WIH                      QRL WIL
+ A   465              ;======================
+ A   466 00143d 6D8B          mar     *ar3-           ;point to QR again              QR
+ A   467 00143e B3A1          mac     *ar4+, *ar3, B  ;B+=QRH*WRH=QR*WR               QR  WRL
+ A   468 00143f F520          sub     A, B            ;B = (QR*WR - QI*WI)
+ A   469 001440 5382          dadd    *ar2, B         ;B=PR+(QR*WR - QI*WI)           PR
+ A   470 001441 5682          dld     *ar2, A         ;A=PR                           PR
+ A   471 001442 8792          sth     B, ASM, *ar2+   ;PRH'=(PR+(QR*WR - QI*WI))/2    PR
+ A   472 001443 8592          stl     B, ASM, *ar2+   ;PRL'=(PR+(QR*WR - QI*WI))/2    PI
+ A   473 001444 F520          sub     A, B            ;B=QR*WR - QI*WI
+ A   474 001445 F620          sub     B, A            ;A=PR-(QR*WR - QI*WI)
+ A   475              ;===== QR*WI (Q31) =====
+ A   476 001446 E900          ld      #0, B
+ A   477 001447 A779          macsu   *ar5-, *ar3+, B ;QRH*WIL                        QRL WIH
+ A   478 001448 A793          macsu   *ar3+, *ar5, B  ;QRH*WIL + QRL*WIH              QIH WIH
+ A   479              
+ A   480              ;===== QI*WR (Q31) =====
+ A   481 001449 A769          macsu   *ar4-, *ar3+, B ;QIH*WRL                        QIL WRH
+ A   482 00144a A752          macsu   *ar3-, *ar4, B  ;QIH*WRL + QIL*WRH              QIH WRH
+ A   483 00144b F750          ld      B, -16, B       ;B>>16
+ A   484 00144c B3E5          mac     *ar4+0%,*ar3-,B ;B=QIH*WRH, next WRL            QIL WRL+1
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+cfft_32.abs                                                          PAGE   10
+
+ A   485 00144d 6D8B          mar     *ar3-           ;                               QRH
+ A   486 00144e B3F1          mac     *ar5+0%,*ar3,B  ;B=QRH*WIH, next WIL            QRH WIL+1
+ A   487                                              ;B=QIWR+QRWI
+ A   488              ;======================
+ A   489 00144f 8693          sth     A, ASM, *ar3+   ;QRH'=(PR-(QR*WR - QI*WI))/2    QRL
+ A   490 001450 8493          stl     A, ASM, *ar3+   ;QRL'=(PR-(QR*WR - QI*WI))/2    QIH
+ A   491              ;======================
+ A   492              
+ A   493 001451 5382          dadd    *ar2, B         ;B=PI+(QI*WR+QR*WI)             PI
+ A   494 001452 5682          dld     *ar2, A         ;A=PI                           PI
+ A   495 001453 8792          sth     B, ASM, *ar2+   ;PIH'=(PI+(QI*WR+QR*WI))/2      QI
+ A   496 001454 8592          stl     B, ASM, *ar2+   ;PIL'=(PI+(QI*WR+QR*WI))/2      QR+1
+ A   497 001455 F520          sub     A, B            ;B=(QI*WR+QR*WI)
+ A   498 001456 F620          sub     B, A            ;A=PI-(QI*WR+QR*WI)
+ A   499 001457 8693          sth     A, ASM, *ar3+   ;QIH'=(PI-(QI*WR+QR*WI))/2      PI
+ A   500 001458 8493  BflyEnd stl     A, ASM, *ar3+   ;QIL'=(PI-(QI*WR+QR*WI))/2      PR+1
+ A   501                      .if     __far_mode
+ A   502                      fret
+ A   503                      .else
+ A   504 001459 FC00          ret
+ A   505                      .endif
+
+No Assembly Errors, No Assembly Warnings
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+cfft_32.abs                                                          PAGE   11
+
+LABEL                                VALUE       DEFN    REF
+
+.TMS320C540                         000000          0 
+.TMS320C541                         000000          0 
+.TMS320C541A                        000000          0 
+.TMS320C542                         000001          0 
+.TMS320C543                         000000          0 
+.TMS320C544                         000000          0 
+.TMS320C545                         000000          0 
+.TMS320C545LP                       000000          0 
+.TMS320C546                         000000          0 
+.TMS320C546LP                       000000          0 
+.TMS320C548                         000000          0 
+.TMS320C549                         000000          0 
+BflyEnd                             001458'     A 500  A 446 
+BflyX                               00141c'     A 404  A 351 
+NoScale                             001340'     A 105  A  44 
+NoScaleEnd                          001370'     A 153  A 106 
+Stg1and2End                         00133e'     A  96  A  49 
+Tempdw1                             000140-     A  22  A  14 
+Tempdw2                             000142-     A  23  A  15 
+__TI_ASSEMBLER_VERSION__            3d10d0          0 
+__far_mode                          000000          0  A  39  A  98  A 155  A 174 
+                                                       A 303  A 323  A 331  A 411 
+                                                       A 501 
+__lflags                            000000          0 
+__no_fret                           000000          0 
+__stores_bug                        000000          0 
+fftButterfly                        001423'     A 432  A  19 
+fftStage1and2                       001308'     A  38  A  16 
+fftStage3                           001372'     A 173  A  17 
+fftStageX                           0013e0'     A 322  A  18  A 407 
+fftStg3End                          0013df'     A 302  A 183 

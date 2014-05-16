@@ -1,0 +1,46 @@
+          .nolist
+.text     .setsym     000043ah
+___text__  .setsym     000043ah
+etext     .setsym     0000690h
+___etext__  .setsym     0000690h
+.bss      .setsym     0000140h
+___bss__  .setsym     0000140h
+end       .setsym     0000142h
+___end__  .setsym     0000142h
+rawdata_loop  .setsym     0000586h
+pre_read  .setsym     0000502h
+RXDSP_START  .setsym     0000451h
+header_skip  .setsym     0000565h
+pre_disc  .setsym     00004ech
+post_sleep  .setsym     00005a3h
+int_nmi   .setsym     00005dah
+dinner_is_ready  .setsym     0000555h
+abu_restart_skip  .setsym     00005c1h
+abu_fill_start  .setsym     0000548h
+pre_sleep  .setsym     000059fh
+ago_main  .setsym     0000451h
+read_init  .setsym     000047ah
+abu_haltx_wait  .setsym     00005b0h
+major_loop  .setsym     00004c8h
+hwrite    .setsym     000063bh
+buff_init_loop  .setsym     000049fh
+abu_first_half  .setsym     000053eh
+bridge_data  .setsym     0000522h
+cfreq_commit  .setsym     0000602h
+cfreq_walk  .setsym     00005e5h
+rsp_clear  .setsym     0000234h
+rsp_freq  .setsym     00001e2h
+rsp_init  .setsym     00001e7h
+rsp_mstart  .setsym     00001d4h
+rsp_sstart  .setsym     00001dbh
+rsp_reset  .setsym     00001cdh
+xfr08     .setsym     00001c5h
+endboot   .setsym     00001c7h
+par08_1   .setsym     000018bh
+blskipskip  .setsym     00001b0h
+BOOTLOAD_START  .setsym     0000180h
+_serial_cook  .setsym     0000690h
+          .setsect    ".bl549",0000180h
+          .list
+          .text
+          .copy       "bl549.asm"

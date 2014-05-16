@@ -1,0 +1,387 @@
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+c512.abs                                                             PAGE    1
+
+      70 000000                 .text
+      71                        .copy       "c512.asm"
+ A     1              ;***********************************************************
+ A     2              ; Version 2.20.01                                           
+ A     3              ;***********************************************************
+ A     4              ;============================================================================
+ A     5              ; Description:  C54x Double Precision 512-Point Complex FFT
+ A     6              ;
+ A     7              ; Author:       Aaron Aboagye, Texas Instruments, Inc., Oct 14, 1998
+ A     8              ;               from inverse code by Mike Hannah,  Texas Instruments, Inc.,  May 14, 1998
+ A     9              ;
+ A    10              ; Function:     _cfft32_512
+ A    11              ;
+ A    12              ; Inputs:       pInBuff in acc A
+ A    13              ;
+ A    14              ; Assumptions:  Input data is in InBuff and output will be in InBuff.
+ A    15              ;               SXM=1 and FRCT=1.  CPL=1 since called from C.
+ A    16              ;
+ A    17              ;=============================================================================
+ A    18              
+ A    19        0200  N       .set    512
+ A    20              
+ A    21                      .global fftStage1and2
+ A    22                      .global fftStage3
+ A    23                      .global fftStageX
+ A    24                      .global fftButterfly
+ A    25                      .global Tempdw1
+ A    26                      .global Tempdw2
+ A    27                      
+ A    28                      .include sin_q31.tab
+ A    29              
+ A    30                      .mmregs
+ A    31              
+ A    32              ;       .text
+ A    33 00185a               .sect ".cfft_p"
+ A    34              
+ A    35                      .global _cfft32_512
+ A    36              
+ A    37 00185a       _cfft32_512:
+ A    38 00185a 4A06          PSHM    ST0                                 ; 1 cycle
+ A    39 00185b 4A07          PSHM    ST1                                 ; 1 cycle
+ A    40              
+ A    41 00185c 4A11          pshm    ar1
+ A    42 00185d 4A16          pshm    ar6
+ A    43 00185e 4A17          pshm    ar7
+ A    44              
+ A    45 00185f F7BE          ssbx    CPL
+ A    46 001860 F4BA          RSBX    OVA                                 ; 1 cycle
+ A    47 001861 F4B9          RSBX    OVB                                 ; 1 cycle
+ A    48              
+ A    49 001862 F6B9          rsbx    ovm                     ;disable overflow mode
+ A    50 001863 F7B8          ssbx    sxm                     ;sxm enabled
+ A    51 001864 F7B6          ssbx    frct                    ;<<1 to make Q31 from Q30 product
+ A    52 001865 7719          stm     #0, BK                  ;use circ addressing in butterfly with zero length
+         001866 0000 
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+c512.abs                                                             PAGE    2
+
+ A    53 001867 8811          stlm    A, ar1                  ;store pInBuff into ar1
+ A    54 001868 4A11          pshm    ar1                     ;put pInBuff on stack for reuse
+ A    55              
+ A    56 001869 ED1E          ld      #-2, ASM                ;>>2 on stores to mem
+ A    57              ;===== Compute 1st and 2nd stages of FFT =====
+ A    58 00186a 1000          ld      *SP(0),A                ;pointer to DATA -> A
+ A    59 00186b 8812          stlm    A,ar2                   ;pointer to DATA       r1,i1
+ A    60 00186c F000          add     #(2*2),A
+         00186d 0004 
+ A    61 00186e 8813          stlm    A,ar3                   ;pointer to DATA + 2   r2,i2
+ A    62 00186f 1000          ld      *SP(0),A                ;pointer to DATA -> A
+ A    63 001870 F000          add     #(4*2),A
+         001871 0008 
+ A    64 001872 8814          stlm    A,ar4                   ;pointer to DATA + 4   r3,i3
+ A    65 001873 7710          stm     #7*2-1,ar0              ;index
+         001874 000D 
+ A    66 001875 771A          stm     #512/4-1,BRC            ;execute N/4-1 times
+         001876 007F 
+ A    67 001877 1000          ld      *SP(0),A                ;pointer to DATA -> A
+ A    68 001878 F000          add     #(6*2),A
+         001879 000C 
+ A    69 00187a 8815          stlm    A,ar5                   ;pointer to DATA + 6   r4,i4
+ A    70              
+ A    71                      .if     __far_mode
+ A    72                      fcall    fftStage1and2          ;in-place
+ A    73                      .else
+ A    74 00187b F074          call     fftStage1and2
+         00187c 1308!
+ A    75                      .endif
+ A    76              
+ A    77              ;===== Compute 3rd stage of FFT =====
+ A    78 00187d 1000          ld      *SP(0),A                ;pointer to DATA -> A
+ A    79 00187e 8812          stlm    A,ar2                   ;pointer to DATA       pr,pi
+ A    80 00187f F000          add     #(8*2),A
+         001880 0010 
+ A    81 001881 8813          stlm    A,ar3                   ;pointer to DATA + 8   qr,qi
+ A    82 001882 7710          stm     #9*2-1,ar0              ;index
+         001883 0011 
+ A    83 001884 771A          stm     #512/8-1,BRC            ;execute N/8-1 times '4 macros'
+         001885 003F 
+ A    84 001886 7715          stm     #Tempdw1,ar5            ;temp dword
+         001887 0140!
+ A    85 001888 7716          stm     #Tempdw2,ar6            ;temp dword
+         001889 0142!
+ A    86 00188a 7714          stm     #SIN45+1,ar4            ;32-bit sin45 twiddle LSW
+         00188b 07B7+
+ A    87              
+ A    88                      .if     __far_mode
+ A    89                      fcall    fftStage3               ;in-place
+ A    90                      .else
+ A    91 00188c F074          call     fftStage3
+         00188d 1372!
+ A    92                      .endif
+ A    93              
+ A    94              ;===== Compute 4th stage of FFT =====
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+c512.abs                                                             PAGE    3
+
+ A    95              ;stdmacro .macro  DATA,stage,l1,l2,idx,sin,cos
+ A    96              ;        stdmacro dstn,4,32,8,16,isin4,cos4
+ A    97 00188e 1000          ld      *SP(0),A                ;pointer to DATA -> A
+ A    98 00188f 8812          stlm    A,ar2                   ;ar2 -> DATA
+ A    99 001890 F000          add     #(16*2),A
+         001891 0020 
+ A   100 001892 8813          stlm    A,ar3                   ;ar3 -> DATA+(offset=idx)
+ A   101 001893 7710          stm     #16*2,ar0               ;index
+         001894 0020 
+ A   102 001895 7711          stm     #32-1,ar1               ;outer loop counter
+         001896 001F 
+ A   103 001897 7716          stm     #cos4+1,ar6             ;start on LSW of cosine in stage
+         001898 01CF+
+ A   104 001899 7717          stm     #isin4+1,ar7            ;start on LSW of sine in stage
+         00189a 01D7+
+ A   105 00189b 7714          stm     #3,AR4                  ;store index offset for butterfly optimization
+         00189c 0003 
+ A   106 00189d 4A14          pshm    AR4
+ A   107 00189e 7714          stm     #8-2,AR4                ;execute startup + num-2 times general butterfly
+         00189f 0006 
+ A   108 0018a0 4A14          pshm    AR4                     ;save for reuse in butterfly
+ A   109              
+ A   110                      .if     __far_mode
+ A   111                      fcall    fftStageX               ;in-place
+ A   112                      .else
+ A   113 0018a1 F074          call     fftStageX
+         0018a2 13E0!
+ A   114                      .endif
+ A   115              
+ A   116 0018a3 EE02          frame   #2
+ A   117 0018a4 F495          nop
+ A   118               ;===== Compute 5th stage of FFT =====
+ A   119              ;stdmacro .macro  DATA,stage,l1,l2,idx,sin,cos
+ A   120              ;       stdmacro dstn,5,16,16,32,isin5,cos5
+ A   121 0018a5 1000          ld      *SP(0),A                ;pointer to DATA -> A
+ A   122 0018a6 8812          stlm    A,ar2                   ;ar2 -> DATA
+ A   123 0018a7 F000          add     #(32*2),A
+         0018a8 0040 
+ A   124 0018a9 8813          stlm    A,ar3                   ;ar3 -> DATA+(offset=idx)
+ A   125 0018aa 7710          stm     #32*2,ar0               ;index
+         0018ab 0040 
+ A   126 0018ac 7711          stm     #16-1,ar1               ;outer loop counter
+         0018ad 000F 
+ A   127 0018ae 7716          stm     #cos5+1,ar6             ;start on LSW of cosine in stage
+         0018af 01E7+
+ A   128 0018b0 7717          stm     #isin5+1,ar7            ;start on LSW of sine in stage
+         0018b1 01F7+
+ A   129 0018b2 7714          stm     #3,AR4                  ;store index offset for butterfly optimization
+         0018b3 0003 
+ A   130 0018b4 4A14          pshm    AR4
+ A   131 0018b5 7714          stm     #16-2,AR4               ;execute startup + num-2 times general butterfly
+         0018b6 000E 
+ A   132 0018b7 4A14          pshm    AR4                     ;save for reuse in butterfly
+ A   133              
+ A   134                      .if     __far_mode
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+c512.abs                                                             PAGE    4
+
+ A   135                      fcall    fftStageX               ;in-place
+ A   136                      .else
+ A   137 0018b8 F074          call     fftStageX
+         0018b9 13E0!
+ A   138                      .endif
+ A   139              
+ A   140 0018ba EE02          frame   #2
+ A   141 0018bb F495          nop
+ A   142              ;===== Compute 6th stage of FFT =====
+ A   143              ;stdmacro .macro  DATA,stage,l1,l2,idx,sin,cos
+ A   144              ;        stdmacro dstn,6,8,32,64,isin6,cos6
+ A   145 0018bc 1000          ld      *SP(0),A                ;pointer to DATA -> A
+ A   146 0018bd 8812          stlm    A,ar2                   ;ar2 -> DATA
+ A   147 0018be F000          add     #(64*2),A
+         0018bf 0080 
+ A   148 0018c0 8813          stlm    A,ar3                   ;ar3 -> DATA+(offset=idx)
+ A   149 0018c1 7710          stm     #64*2,ar0               ;index
+         0018c2 0080 
+ A   150 0018c3 7711          stm     #8-1,ar1                ;outer loop counter
+         0018c4 0007 
+ A   151 0018c5 7716          stm     #cos6+1,ar6             ;start on LSW of cosine in stage
+         0018c6 0217+
+ A   152 0018c7 7717          stm     #isin6+1,ar7            ;start on LSW of sine in stage
+         0018c8 0237+
+ A   153 0018c9 7714          stm     #3,AR4                  ;store index offset for butterfly optimization
+         0018ca 0003 
+ A   154 0018cb 4A14          pshm    AR4
+ A   155 0018cc 7714          stm     #32-2,AR4               ;execute startup + num-2 times general butterfly
+         0018cd 001E 
+ A   156 0018ce 4A14          pshm    AR4                     ;save for reuse in butterfly
+ A   157              
+ A   158                      .if     __far_mode
+ A   159                      fcall    fftStageX               ;in-place
+ A   160                      .else
+ A   161 0018cf F074          call     fftStageX
+         0018d0 13E0!
+ A   162                      .endif
+ A   163              
+ A   164 0018d1 EE02          frame   #2
+ A   165 0018d2 F495          nop
+ A   166              ;===== Compute 7th stage of FFT =====
+ A   167              ;stdmacro .macro  DATA,stage,l1,l2,idx,sin,cos
+ A   168              ;        stdmacro dstn,7,4,64,128,isin7,cos7
+ A   169 0018d3 1000          ld      *SP(0),A                ;pointer to DATA -> A
+ A   170 0018d4 8812          stlm    A,ar2                   ;ar2 -> DATA
+ A   171 0018d5 F000          add     #(128*2),A
+         0018d6 0100 
+ A   172 0018d7 8813          stlm    A,ar3                   ;ar3 -> DATA+(offset=idx)
+ A   173 0018d8 7710          stm     #128*2,ar0              ;index
+         0018d9 0100 
+ A   174 0018da 7711          stm     #4-1,ar1                ;outer loop counter
+         0018db 0003 
+ A   175 0018dc 7716          stm     #cos7+1,ar6             ;start on LSW of cosine in stage
+         0018dd 0277+
+ A   176 0018de 7717          stm     #isin7+1,ar7            ;start on LSW of sine in stage
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+c512.abs                                                             PAGE    5
+
+         0018df 02B7+
+ A   177 0018e0 7714          stm     #3,AR4                  ;store index offset for butterfly optimization
+         0018e1 0003 
+ A   178 0018e2 4A14          pshm    AR4
+ A   179 0018e3 7714          stm     #64-2,AR4               ;execute startup + num-2 times general butterfly
+         0018e4 003E 
+ A   180 0018e5 4A14          pshm    AR4                     ;save for reuse in butterfly
+ A   181              
+ A   182                      .if     __far_mode
+ A   183                      fcall    fftStageX               ;in-place
+ A   184                      .else
+ A   185 0018e6 F074          call     fftStageX
+         0018e7 13E0!
+ A   186                      .endif
+ A   187              
+ A   188 0018e8 EE02          frame   #2
+ A   189 0018e9 F495          nop
+ A   190              ;===== Compute 8th stage of FFT =====
+ A   191              ;stdmacro .macro  DATA,stage,l1,l2,idx,sin,cos
+ A   192              ;        stdmacro dstn,8,2,128,256,isin8,cos8
+ A   193 0018ea 1000          ld      *SP(0),A                ;pointer to DATA -> A
+ A   194 0018eb 8812          stlm    A,ar2                   ;ar2 -> DATA
+ A   195 0018ec F000          add     #(256*2),A
+         0018ed 0200 
+ A   196 0018ee 8813          stlm    A,ar3                   ;ar3 -> DATA+(offset=idx)
+ A   197 0018ef 7710          stm     #256*2,ar0              ;index
+         0018f0 0200 
+ A   198 0018f1 7711          stm     #2-1,ar1                ;outer loop counter
+         0018f2 0001 
+ A   199 0018f3 7716          stm     #cos8+1,ar6             ;start on LSW of cosine in stage
+         0018f4 0337+
+ A   200 0018f5 7717          stm     #isin8+1,ar7            ;start on LSW of sine in stage
+         0018f6 03B7+
+ A   201 0018f7 7714          stm     #3,AR4                  ;store index offset for butterfly optimization
+         0018f8 0003 
+ A   202 0018f9 4A14          pshm    AR4
+ A   203 0018fa 7714          stm     #128-2,AR4              ;execute startup + num-2 times general butterfly
+         0018fb 007E 
+ A   204 0018fc 4A14          pshm    AR4                     ;save for reuse in butterfly
+ A   205              
+ A   206                      .if     __far_mode
+ A   207                      fcall    fftStageX               ;in-place
+ A   208                      .else
+ A   209 0018fd F074          call     fftStageX
+         0018fe 13E0!
+ A   210                      .endif
+ A   211              
+ A   212 0018ff EE02          frame   #2
+ A   213 001900 F495          nop
+ A   214              ;===== Compute 9th (last) stage of FFT =====
+ A   215              ;laststag .macro  DATA,stage,sin,cos
+ A   216              ;        laststag dstn,9,isin9,cos9
+ A   217 001901 1000          ld      *SP(0),A                ;pointer to DATA -> A
+ A   218 001902 8812          stlm    A,ar2                   ;ar2 -> DATA
+ A   219 001903 F000          add     #(512*2),A
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+c512.abs                                                             PAGE    6
+
+         001904 0400 
+ A   220 001905 8813          stlm    A,ar3                   ;ar3 -> DATA+(offset=N)
+ A   221 001906 771A          stm     #512/2-2,BRC            ;execute startup + num-2 times general butterfly
+         001907 00FE 
+ A   222 001908 7714          stm     #cos9+1,ar4             ;start on LSW of cosine in stage
+         001909 04B7+
+ A   223 00190a 7715          stm     #isin9+1,ar5            ;start on LSW of sine in stage
+         00190b 05B7+
+ A   224              
+ A   225                      .if     __far_mode
+ A   226                      fcalld   fftButterfly           ;execute N/2 butterflies in-place
+ A   227                      .else
+ A   228 00190c F274          calld    fftButterfly
+         00190d 1423!
+ A   229                      .endif
+ A   230              
+ A   231 00190e 7710          stm     #3,AR0                  ;store index offset for butterfly optimization
+         00190f 0003 
+ A   232              
+ A   233 001910 8A11          popm    ar1                     ;remove pInBuff from stack
+ A   234 001911 8A17          popm    ar7
+ A   235 001912 8A16          popm    ar6
+ A   236 001913 8A11          popm    ar1
+ A   237 001914 8A07          POPM    ST1                                 ; 1 cycle
+ A   238 001915 8A06          POPM    ST0                                 ; 1 cycle
+ A   239              
+ A   240                      .if     __far_mode
+ A   241                      fret
+ A   242                      .else
+ A   243 001916 FC00          ret
+ A   244                      .endif
+
+No Assembly Errors, No Assembly Warnings
+TMS320C54x Assembler PC v4.2.0 Fri Aug 10 17:04:37 2012
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+c512.abs                                                             PAGE    7
+
+LABEL                                VALUE       DEFN    REF
+
+.TMS320C540                         000000          0 
+.TMS320C541                         000000          0 
+.TMS320C541A                        000000          0 
+.TMS320C542                         000001          0 
+.TMS320C543                         000000          0 
+.TMS320C544                         000000          0 
+.TMS320C545                         000000          0 
+.TMS320C545LP                       000000          0 
+.TMS320C546                         000000          0 
+.TMS320C546LP                       000000          0 
+.TMS320C548                         000000          0 
+.TMS320C549                         000000          0 
+N                                   000200      A  19  B  13  B  29  B  57  B 109 
+                                                       B 209  B 405  B 793 
+SIN45                               0007b6+     B1565  A  86 
+Tempdw1                                REF             A  25  A  84 
+Tempdw2                                REF             A  26  A  85 
+__TI_ASSEMBLER_VERSION__            3d10d0          0 
+__far_mode                          000000          0  A  71  A  88  A 110  A 134 
+                                                       A 158  A 182  A 206  A 225 
+                                                       A 240 
+__lflags                            000000          0 
+__no_fret                           000000          0 
+__stores_bug                        000000          0 
+_cfft32_512                         00185a+     A  37  A  35 
+cos4                                0001ce+     B  15  A 103 
+cos5                                0001e6+     B  31  A 127 
+cos6                                000216+     B  59  A 151 
+cos7                                000276+     B 111  A 175 
+cos8                                000336+     B 211  A 199 
+cos9                                0004b6+     B 407  A 222 
+fftButterfly                           REF             A  24  A 228 
+fftStage1and2                          REF             A  21  A  74 
+fftStage3                              REF             A  22  A  91 
+fftStageX                              REF             A  23  A 113  A 137  A 161 
+                                                       A 185  A 209 
+isin4                               0001d6+     B  19  A 104 
+isin5                               0001f6+     B  39  A 128 
+isin6                               000236+     B  75  A 152 
+isin7                               0002b6+     B 143  A 176 
+isin8                               0003b6+     B 275  A 200 
+isin9                               0005b6+     B 535  A 223 

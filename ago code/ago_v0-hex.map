@@ -1,0 +1,38 @@
+********************************************************************************
+TMS320C54x Hex Converter                                                  v4.2.0
+********************************************************************************
+
+INPUT FILE NAME: <ago_v0.out>
+OUTPUT FORMAT:   Intel
+
+PHYSICAL MEMORY PARAMETERS
+   Default data width   :  16
+   Default memory width :   8 (MS-->LS)
+   Default output width :   8
+
+BOOT LOADER PARAMETERS
+   Table Address: 0x0000, PAGE 0
+   Entry Point  : 0x1436
+
+
+OUTPUT TRANSLATION MAP
+--------------------------------------------------------------------------------
+00000000..00007fff  Page=0  Memory Width=8  ROM Width=8  "EPROM1"
+--------------------------------------------------------------------------------
+   OUTPUT FILES: ago_v0.hex [b0..b7]
+
+   CONTENTS: 00000000..00002a7f   BOOT TABLE
+                           .bl549 : dest=00000180  size=0000004d  width=00000002
+                         .vectors : dest=00000080  size=00000080  width=00000002
+                            .text : dest=00001436  size=0000034d  width=00000002
+                         .cbrev_p : dest=000007b8  size=0000003d  width=00000002
+                          .cfft_p : dest=00001783  size=000000bd  width=00000002
+                         .log10_p : dest=0000195a  size=0000005e  width=00000002
+                        .sine_tab : dest=000001ce  size=000005ea  width=00000002
+                        .hann_tab : dest=00001036  size=00000400  width=00000002
+                          .hann_p : dest=00001a0d  size=00000022  width=00000002
+                       .sercook_p : dest=000019e8  size=00000025  width=00000002
+                          .ad6620 : dest=00000c00  size=00000436  width=00000002
+                      .transfer_p : dest=00001840  size=00000093  width=00000002
+                          .dpsm_p : dest=000019b8  size=00000030  width=00000002
+                         .scale_p : dest=000018d3  size=00000087  width=00000002

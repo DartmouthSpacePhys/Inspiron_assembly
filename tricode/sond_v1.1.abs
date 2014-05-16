@@ -1,0 +1,47 @@
+          .nolist
+.text     .setsym     000043ah
+___text__  .setsym     000043ah
+etext     .setsym     0000660h
+___etext__  .setsym     0000660h
+.bss      .setsym     0000140h
+___bss__  .setsym     0000140h
+end       .setsym     0000142h
+___end__  .setsym     0000142h
+rawdata_loop  .setsym     000056ch
+pre_read  .setsym     00004f4h
+RXDSP_START  .setsym     000044fh
+pre_disc  .setsym     00004deh
+post_sleep  .setsym     0000587h
+int_nmi   .setsym     00005bah
+dinner_is_ready  .setsym     0000541h
+abu_restart_skip  .setsym     00005a3h
+abu_fill_start  .setsym     0000534h
+pre_sleep  .setsym     0000583h
+ago_main  .setsym     000044fh
+read_init  .setsym     0000478h
+abu_haltx_wait  .setsym     0000594h
+major_loop  .setsym     00004beh
+hwrite    .setsym     000060ah
+buff_init_loop  .setsym     00004a2h
+abu_first_half  .setsym     000052ah
+bridge_data  .setsym     0000512h
+rsp_clear  .setsym     0000234h
+rsp_freq  .setsym     00001e2h
+rsp_init  .setsym     00001e7h
+rsp_mstart  .setsym     00001d4h
+rsp_sstart  .setsym     00001dbh
+rsp_reset  .setsym     00001cdh
+xfr08     .setsym     00001c5h
+endboot   .setsym     00001c7h
+par08_1   .setsym     000018bh
+blskipskip  .setsym     00001b0h
+BOOTLOAD_START  .setsym     0000180h
+_serial_cook  .setsym     0000660h
+          .setsect    ".text",000043ah
+          .setsect    ".bss",0000140h
+          .setsect    ".data_v",0002000h
+          .setsect    ".stack_v",0000100h
+          .setsect    ".sbuff_v",0000800h
+          .list
+          .text
+          .copy       "sond_v1.1.asm"

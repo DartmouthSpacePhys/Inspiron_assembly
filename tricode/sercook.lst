@@ -1,0 +1,106 @@
+TMS320C54x Assembler PC v4.2.0 Tue Aug 06 15:20:16 2013
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+sercook.abs                                                          PAGE    1
+
+      45 000000                 .text
+      46                        .copy       "sercook.asm"
+ A     1              ****
+ A     2              * Serial data cooking function by Micah P. Dombrowski
+ A     3              * 
+ A     4              * Reads N words containing right-aligned bytes, 
+ A     5              * bit reverses, and adds start and stop bits.
+ A     6              ****
+ A     7              
+ A     8              * Inputs: data address in A, number of bytes in B
+ A     9              
+ A    10              * History
+ A    11              * 
+ A    12              * v1.0  3 June 2012     Extracted to separate asm file, set up as a CALLable function.
+ A    13              *
+ A    14              
+ A    15                      .mmregs
+ A    16                      .def    _serial_cook
+ A    17 000690               .sect   .sercook_p
+ A    18 000690       _serial_cook
+ A    19              
+ A    20 000690 F310          sub     #1, B
+         000691 0001 
+ A    21 000692 891A          stlm    B, BRC
+ A    22 000693 8810          stlm    A, AR0
+ A    23 000694 F072          rptb    bitrev_loop - 1
+         000695 06B1+
+ A    24              
+ A    25 000696 F7BD          ssbx    XF
+ A    26              
+ A    27 000697 E901          ld              #1, B                   ; zero result + stop bit
+ A    28                      
+ A    29 000698 E801          ld              #001h, A        ; load mask
+ A    30 000699 1880          and             *AR0, A         ; mask data
+ A    31 00069a F1A8          or              A, 8, B         ; OR into result
+ A    32 00069b E802          ld              #002h, A
+ A    33 00069c 1880          and             *AR0, A
+ A    34 00069d F1A6          or              A, 6, B
+ A    35 00069e E804          ld              #004h, A
+ A    36 00069f 1880          and             *AR0, A
+ A    37 0006a0 F1A4          or              A, 4, B
+ A    38 0006a1 E808          ld              #008h, A
+ A    39 0006a2 1880          and             *AR0, A
+ A    40 0006a3 F1A2          or              A, 2, B
+ A    41 0006a4 E810          ld              #010h, A
+ A    42 0006a5 1880          and             *AR0, A
+ A    43 0006a6 F1A0          or              A, 0, B
+ A    44 0006a7 E820          ld              #020h, A
+ A    45 0006a8 1880          and             *AR0, A
+ A    46 0006a9 F1BE          or              A, -2, B
+ A    47 0006aa E840          ld              #040h, A
+ A    48 0006ab 1880          and             *AR0, A
+ A    49 0006ac F1BC          or              A, -4, B
+ A    50 0006ad E880          ld              #080h, A
+ A    51 0006ae 1880          and             *AR0, A
+TMS320C54x Assembler PC v4.2.0 Tue Aug 06 15:20:16 2013
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+sercook.abs                                                          PAGE    2
+
+ A    52 0006af F1BA          or              A, -6, B
+ A    53              
+ A    54 0006b0 8190          stl             B, *AR0+                        ; rewrite to serial buffer
+ A    55                      
+ A    56 0006b1 F6BD          rsbx    XF      
+ A    57                      
+ A    58 0006b2       bitrev_loop:
+ A    59              
+ A    60 0006b2 FE00          retd
+ A    61 0006b3 F495          nop
+ A    62 0006b4 F495          nop
+ A    63                      
+ A    64                      .end
+
+No Assembly Errors, No Assembly Warnings
+TMS320C54x Assembler PC v4.2.0 Tue Aug 06 15:20:16 2013
+
+Tools Copyright (c) 1996-2008 Texas Instruments Incorporated
+sercook.abs                                                          PAGE    3
+
+LABEL                                VALUE       DEFN    REF
+
+.TMS320C540                         000000          0 
+.TMS320C541                         000000          0 
+.TMS320C541A                        000000          0 
+.TMS320C542                         000001          0 
+.TMS320C543                         000000          0 
+.TMS320C544                         000000          0 
+.TMS320C545                         000000          0 
+.TMS320C545LP                       000000          0 
+.TMS320C546                         000000          0 
+.TMS320C546LP                       000000          0 
+.TMS320C548                         000000          0 
+.TMS320C549                         000000          0 
+__TI_ASSEMBLER_VERSION__            3d10d0          0 
+__far_mode                          000000          0 
+__lflags                            000000          0 
+__no_fret                           000000          0 
+__stores_bug                        000000          0 
+_serial_cook                        000690+     A  18  A  16 
+bitrev_loop                         0006b2+     A  58  A  23 

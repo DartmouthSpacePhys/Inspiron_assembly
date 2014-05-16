@@ -1,0 +1,165 @@
+******************************************************************************
+              TMS320C54x Linker PC v4.2.0                      
+******************************************************************************
+>> Linked Tue Jul 17 17:42:04 2012
+
+OUTPUT FILE NAME:   <sond_v1.1.out>
+ENTRY POINT SYMBOL: "RXDSP_START"  address: 0000044f
+
+
+MEMORY CONFIGURATION
+
+         name            origin    length      used     unused   attr    fill
+----------------------  --------  ---------  --------  --------  ----  --------
+PAGE 0:
+  INTR_TABLE            00000080   00000080  00000080  00000000  RW X
+  PROG_ANNEX            00000180   00000680  00000504  0000017c  R IX
+  PROG_MAIN             00001000   00000800  00000000  00000800  R IX
+
+PAGE 1:
+  STACK                 00000100   00000040  00000040  00000000  RW  
+  TEMP_DATA             00000140   00000040  00000002  0000003e  RW  
+  SBUFFER               00000800   00000418  00000418  00000000  RW  
+  DATA                  00002000   00000800  00000800  00000000  RW  
+
+
+SECTION ALLOCATION MAP
+
+ output                                  attributes/
+section   page    origin      length       input sections
+--------  ----  ----------  ----------   ----------------
+.vectors   0    00000080    00000080     
+                  00000080    00000080     int_table.obj (.vectors)
+
+.bl549     0    00000180    0000004d     
+                  00000180    0000004d     bl549.obj (.bl549)
+
+.ad6620    0    000001cd    0000026c     
+                  000001cd    0000026c     ad6620_SS.obj (.ad6620)
+
+.text      0    0000043a    00000226     
+                  0000043a    0000021f     sond_v1.1.obj (.text)
+                  00000659    00000001     --HOLE-- [fill = 0]
+                  0000065a    00000006     ad6620_SS.obj (.text)
+
+.sercook_p 
+*          0    00000660    00000025     
+                  00000660    00000025     sercook.obj (.sercook_p)
+
+.stack_v   1    00000100    00000040     UNINITIALIZED
+                  00000100    00000040     sond_v1.1.obj (.stack_v)
+
+.bss       1    00000140    00000002     UNINITIALIZED
+                  00000140    00000002     sond_v1.1.obj (.bss)
+
+.sbuff_v   1    00000800    00000418     UNINITIALIZED
+                  00000800    00000418     sond_v1.1.obj (.sbuff_v)
+
+.data_v    1    00002000    00000800     UNINITIALIZED
+                  00002000    00000800     sond_v1.1.obj (.data_v)
+
+
+GLOBAL SYMBOLS: SORTED ALPHABETICALLY BY Name 
+
+address    name
+--------   ----
+00000140   .bss
+0000043a   .text
+00000180   BOOTLOAD_START
+0000044f   RXDSP_START
+ffffffff   ___binit__
+00000140   ___bss__
+ffffffff   ___c_args__
+ffffffff   ___cinit__
+00000142   ___end__
+00000660   ___etext__
+ffffffff   ___pinit__
+0000043a   ___text__
+00000000   __lflags
+00000660   _serial_cook
+00000534   abu_fill_start
+0000052a   abu_first_half
+00000594   abu_haltx_wait
+000005a3   abu_restart_skip
+0000044f   ago_main
+ffffffff   binit
+000001b0   blskipskip
+00000512   bridge_data
+000004a2   buff_init_loop
+ffffffff   cinit
+00000541   dinner_is_ready
+00000142   end
+000001c7   endboot
+00000660   etext
+0000060a   hwrite
+000005ba   int_nmi
+000004be   major_loop
+0000018b   par08_1
+ffffffff   pinit
+00000587   post_sleep
+000004de   pre_disc
+000004f4   pre_read
+00000583   pre_sleep
+0000056c   rawdata_loop
+00000478   read_init
+00000234   rsp_clear
+000001e2   rsp_freq
+000001e7   rsp_init
+000001d4   rsp_mstart
+000001cd   rsp_reset
+000001db   rsp_sstart
+000001c5   xfr08
+
+
+GLOBAL SYMBOLS: SORTED BY Symbol Address 
+
+address    name
+--------   ----
+00000000   __lflags
+00000140   .bss
+00000140   ___bss__
+00000142   ___end__
+00000142   end
+00000180   BOOTLOAD_START
+0000018b   par08_1
+000001b0   blskipskip
+000001c5   xfr08
+000001c7   endboot
+000001cd   rsp_reset
+000001d4   rsp_mstart
+000001db   rsp_sstart
+000001e2   rsp_freq
+000001e7   rsp_init
+00000234   rsp_clear
+0000043a   .text
+0000043a   ___text__
+0000044f   RXDSP_START
+0000044f   ago_main
+00000478   read_init
+000004a2   buff_init_loop
+000004be   major_loop
+000004de   pre_disc
+000004f4   pre_read
+00000512   bridge_data
+0000052a   abu_first_half
+00000534   abu_fill_start
+00000541   dinner_is_ready
+0000056c   rawdata_loop
+00000583   pre_sleep
+00000587   post_sleep
+00000594   abu_haltx_wait
+000005a3   abu_restart_skip
+000005ba   int_nmi
+0000060a   hwrite
+00000660   ___etext__
+00000660   _serial_cook
+00000660   etext
+ffffffff   ___binit__
+ffffffff   ___c_args__
+ffffffff   ___cinit__
+ffffffff   ___pinit__
+ffffffff   binit
+ffffffff   cinit
+ffffffff   pinit
+
+[46 symbols]
